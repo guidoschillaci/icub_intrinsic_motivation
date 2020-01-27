@@ -120,7 +120,7 @@ class JointReader():
 		self.joint_pos_pub.publish(self.joint_pos_msg)
 
 
-	def __del__(self):
+	def __del__(self): 
 		# Cleanup
 		#self.input_port_arm.close()
 		pass
