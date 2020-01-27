@@ -3,7 +3,10 @@
 #from enum import Enum
 import numpy as np
 from icub_drivers.msg import JointPositions
- 
+
+SPEED_THRESHOLD=0.1 
+
+# comment the ones you don't want to use
 JointNames = ["head",
 #"torso",
 "left_arm",
@@ -25,9 +28,9 @@ JointNames = ["head",
 ]
 
 def set_joint_pos_msg_value(_msg, attr, _value, size):
-	print ('before ',_value)
+	#print ('before ',_value)
 	value =np.fromstring( _value, dtype=float, sep=' ')
-	print (str(value))
+	#print (str(value))
 	msg=_msg
 	if attr == "head": msg.head = value
 	if attr == "torso": msg.torso = value
@@ -50,6 +53,31 @@ def set_joint_pos_msg_value(_msg, attr, _value, size):
 	if attr == "right_foot": msg.right_foot = value
 
 	return msg
+
+
+def get_joint_values_from_msg(msg, attr):
+	
+	if attr == "head": return msg.head 
+	if attr == "torso": return msg.torso
+	if attr == "left_arm": return msg.left_arm
+	if attr == "left_hand": return msg.left_hand
+	if attr == "left_hand_thumb": return msg.left_hand_thumb
+	if attr == "left_hand_index": return msg.left_hand_index
+	if attr == "left_hand_middle": return msg.left_hand_middle
+	if attr == "left_hand_finger": return msg.left_hand_finger
+	if attr == "left_hand_pinky": return msg.left_hand_pinky
+	if attr == "left_foot": return msg.left_foot
+
+	if attr == "right_arm": return msg.right_arm
+	if attr == "right_hand": return msg.right_hand
+	if attr == "right_hand_thumb": return msg.right_hand_thumb
+	if attr == "right_hand_index": return msg.right_hand_index
+	if attr == "right_hand_middle": return msg.right_hand_middle
+	if attr == "right_hand_finger": return msg.right_hand_finger
+	if attr == "right_hand_pinky": return msg.right_hand_pinky
+	if attr == "right_foot": return msg.right_foot
+
+	return "error"
 
 ##############################
 

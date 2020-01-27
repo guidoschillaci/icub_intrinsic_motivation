@@ -13,7 +13,7 @@ os.environ["ROS_HOSTNAME"] = "localhost"
 
 #robot_ip = "192.168.26.135"
 robot_ip = "localhost"
-robot_port = 9559
+#robot_port = 9559
 
 ##use this when using gazebo. Use a better way to check this
 if robot_ip =="localhost":
@@ -30,6 +30,7 @@ class JointReader():
 		
 		# create the publishers
 		self.joint_pos_pub = rospy.Publisher('/icubRos/sensors/joint_positions', JointPositions, queue_size=10)
+		self.joint_speed_pub = rospy.Publisher('/icubRos/sensors/joint_speeds', JointPositions, queue_size=10)
 
 
 		self.props = []
@@ -47,29 +48,14 @@ class JointReader():
 			self.joint_drivers.append(yarp.PolyDriver(self.props[-1]))
 			self.encoders.append(self.joint_drivers[-1].viewIEncoders())
 
-			#yarp.delay(1)
-			# creating interfaces
-			#self.iPos = self.arm_driver.viewIPositionControl()
-			#self.iVel = self.arm_driver.viewIVelocityControl()
-			#self.iEnc = self.arm_driver.viewIEncoders()
-
-			#yarp.delay(1.0)
-			# number ofjoints
-			#self.n_joints = self.joint_drivers[-1].Pos.getAxes()
-			#print ("number of joints: ", self.n_joints)
-
-
-		#self.input_port_arm = yarp.Port()
-		#self.input_port_arm.open("/icubRos/left_arm")
-		#yarp.Network.connect("/icubSim/left_arm/analog:o", "/icubRos/left_arm")
-
 		# initialise ROS messages
 		self.joint_pos_msg = JointPositions()
+		self.joint_speed_msg = JointPositions()
 		self.current_time = time.time()
 		rate = 10.0 #hertz
 		#rate = rospy.Rate(10) # for some reasons, using rospy rate slows it down a lot (check why)
 		while not rospy.is_shutdown():
-			self.read_and_publish_in_ros()
+			self.read_and_publish_in_ros(verbose=False)
 			time.sleep(1/rate)
 			#rate.sleep()
 			#rospy.sleep(1/rate)
@@ -77,47 +63,28 @@ class JointReader():
 	def get_num_joints(self, group_id):
 		return self.joint_drivers[group_id].viewIPositionControl().getAxes()
 
-	def read_and_publish_in_ros(self):
-		start_time = time.time()
+	def read_and_publish_in_ros(self, verbose=False):
+		if verbose:
+			start_time = time.time()
 		# set ROS timestamp
 		self.joint_pos_msg.header.stamp = rospy.Time.now()
 		for j in range(len(data_keys.JointNames)):
 			self.current_position = yarp.Vector(self.get_num_joints(j))
+			self.current_speed = yarp.Vector(self.get_num_joints(j))
 			# get data from encoders
 			self.encoders[j].getEncoders(self.current_position.data())
-			#self.joint_pos_msg = data_keys.set_joint_pos_msg_value(self.joint_pos_msg, data_keys.JointNames[j], np.array(self.current_position.data()))
-			'''
-			attr = data_keys.JointNames[j]
-			print ("attr ",attr, " type ", np.asarray(self.current_position.data()))
-			if attr == "head": self.joint_pos_msg.head = self.current_position.data()
-			if attr == "torso": self.joint_pos_msg.torso = self.current_position.data()
-			if attr == "left_arm": self.joint_pos_msg.left_arm = self.current_position.data()
-			if attr == "left_hand": self.joint_pos_msg.left_hand = self.current_position.data()
-			if attr == "left_hand_thumb": self.joint_pos_msg.left_hand_thumb = self.current_position.data()
-			if attr == "left_hand_index": self.joint_pos_msg.left_hand_index = self.current_position.data()
-			if attr == "left_hand_middle": self.joint_pos_msg.left_hand_middle = self.current_position.data()
-			if attr == "left_hand_finger": self.joint_pos_msg.left_hand_finger = self.current_position.data()
-			if attr == "left_hand_pinky": self.joint_pos_msg.left_hand_pinky = self.current_position.data()
-			if attr == "left_foot": self.joint_pos_msg.left_foot = self.current_position.data()
-
-			if attr == "right_arm": self.joint_pos_msg.right_arm = self.current_position.data()
-			if attr == "right_hand": self.joint_pos_msg.right_hand = self.current_position.data()
-			if attr == "right_hand_thumb": self.joint_pos_msg.right_hand_thumb = self.current_position.data()
-			if attr == "right_hand_index": self.joint_pos_msg.right_hand_index = self.current_position.data()
-			if attr == "right_hand_middle": self.joint_pos_msg.right_hand_middle = self.current_position.data()
-			if attr == "right_hand_finger": self.joint_pos_msg.right_hand_finger = self.current_position.data()
-			if attr == "right_hand_pinky": self.joint_pos_msg.right_hand_pinky = self.current_position.data()
-			if attr == "right_foot": self.joint_pos_msg.right_foot = value
-			'''
+			self.encoders[j].getEncoderSpeeds(self.current_speed.data())
+			# copy values into ROS msg
 			self.joint_pos_msg = data_keys.set_joint_pos_msg_value(self.joint_pos_msg, data_keys.JointNames[j], self.current_position.toString(-1,1), self.get_num_joints(j))
-			#data = list(map(self.current_position.data().__get_item__,range(self.current_position.data().size())))
-			#print(data_keys.JointNames[j]," ", self.current_position.toString(-1,1))
-			# fill them into ROS msg
-		end_time = time.time()
-		elapsed = end_time - start_time
-		print ("Eeading time (seconds): ", elapsed, " time_btw ", end_time-self.current_time, " time now ", end_time, " ros_stamp ", self.joint_pos_msg.header.stamp)
-		self.current_time=end_time
+			self.joint_speed_msg = data_keys.set_joint_pos_msg_value(self.joint_speed_msg, data_keys.JointNames[j], self.current_speed.toString(-1,1), self.get_num_joints(j))
+		if verbose:
+			end_time = time.time()
+			elapsed = end_time - start_time
+			print ("reading time (seconds): ", elapsed, " time_btw ", end_time-self.current_time, " time now ", end_time, " ros_stamp ", self.joint_pos_msg.header.stamp)
+			self.current_time=end_time
+		# publish ROS message
 		self.joint_pos_pub.publish(self.joint_pos_msg)
+		self.joint_speed_pub.publish(self.joint_speed_msg)
 
 
 	def __del__(self): 
