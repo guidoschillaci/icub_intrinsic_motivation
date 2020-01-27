@@ -3,7 +3,7 @@
 #from enum import Enum
 import numpy as np
 from icub_drivers.msg import JointPositions
-
+ 
 JointNames = ["head",
 #"torso",
 "left_arm",

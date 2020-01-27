@@ -1,7 +1,7 @@
 Header header
 float32[] head
 float32[] torso
-float32[] left_arm
+float32[] left_arm 
 float32[] left_hand
 float32[] left_hand_thumb
 float32[] left_hand_index
