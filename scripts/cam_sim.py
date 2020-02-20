@@ -94,13 +94,13 @@ def extract_images(file_name):
 			#image = bridge.imgmsg_to_cv2(image_msg, "bgr8")
 
 			cmd = memory['position']
-			title = './rgb_rectified/x'+str(cmd.x)+'_y'+str(cmd.y)+'.jpeg'
+			title = './romi_data/x'+str(cmd.x)+'_y'+str(cmd.y)+'.jpeg'
 			cv2.imwrite(title,image)
 
 if __name__ == '__main__':
 
-	path="./rgb_rectified"
-
+	path="./romi_data"
+	channels =1
 	compressed_dataset = path+'/compressed_dataset.pkl'
 	if os.path.isfile(compressed_dataset):
 		print ('compressed dataset already exists')
@@ -122,6 +122,8 @@ if __name__ == '__main__':
 			p.speed=1400
 			#print path+'/'+os.path.relpath(file)
 			cv_img = cv2.imread(path+'/'+os.path.relpath(file))
+			if channels ==1:
+				cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
 			cv_img = cv2.resize(cv_img, (64, 64))
 			#image_msg= bridge.cv2_to_imgmsg(cv_img, "bgr8")
 			#samples.append({'image': image_msg, 'position':p, 'command':p})

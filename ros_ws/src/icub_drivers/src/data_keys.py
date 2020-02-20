@@ -3,13 +3,14 @@
 #from enum import Enum
 import numpy as np
 from icub_drivers.msg import JointPositions
+import yarp
 
 SPEED_THRESHOLD=0.1 
 
 # comment the ones you don't want to use
 JointNames = ["head",
 #"torso",
-"left_arm",
+#"left_arm",
 #"left_hand",
 #"left_hand_thumb",
 #"left_hand_index",
@@ -26,6 +27,25 @@ JointNames = ["head",
 #"right_hand_pinky",
 #"right_foot"
 ]
+
+
+def get_joint_pos_limits():
+	# Initialise YARP
+	yarp.Network.init()
+	joint_limits = []
+	for j in range(len(JointNames)):	
+		props= yarp.Property()
+		props.put("device", "remote_controlboard")
+		props.put("local", "/client/"+data_keys.JointNames[j])
+		props.put("remote", "/icubSim/"+data_keys.JointNames[j])
+
+		joint_driver=yarp.PolyDriver(props)
+		encoder=joint_drivers.viewIEncoders()
+
+		limits = yarp.Vector(joint_driver.viewIPositionControl().getAxes())
+		limits = encoder.getLimits(limits.data())
+		joint_limits.append( np.fromstring(limits.toString(-1,1), dtype=float, sep=' ') )
+	return joint_limits
 
 def set_joint_pos_msg_value(_msg, attr, _value, size):
 	#print ('before ',_value)

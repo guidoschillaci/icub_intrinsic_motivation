@@ -20,7 +20,7 @@ class Memory:
         self.learning_progress = [] # derivative of the prediction errors (for the moment, just simply pe(t) - pe(t-1)
 
     def is_memory_still_not_full(self):
-        if len(self.input) < self.parameters.get('memory_size'):
+        if len(self.input_variables) < self.parameters.get('memory_size'):
             return True
         else:
             return False

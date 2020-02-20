@@ -77,7 +77,7 @@ def parse_data( file_name, pixels, reshape, channels=1):
 	images = np.asarray(images)
 	if reshape:
 		images = images.reshape((len(images), pixels, pixels, channels))
-
+	#print ('images shape ', str(images.shape))
 	return images.astype('float32') / 255, commands, positions
 
 #### utility functions for reading visuo-motor data from the ROMI dataset

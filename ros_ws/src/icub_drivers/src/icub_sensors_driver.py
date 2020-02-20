@@ -6,7 +6,8 @@ from icub_drivers.msg import JointPositions
 import data_keys
 import time
 import yarp
-
+import threading
+lock = threading.Lock()
 import os
 os.environ["ROS_MASTER_URI"] = "http://localhost:11311"
 os.environ["ROS_HOSTNAME"] = "localhost"
@@ -68,6 +69,8 @@ class JointReader():
 			start_time = time.time()
 		# set ROS timestamp
 		self.joint_pos_msg.header.stamp = rospy.Time.now()
+		# lock to this thread	
+		lock.acquire()
 		for j in range(len(data_keys.JointNames)):
 			self.current_position = yarp.Vector(self.get_num_joints(j))
 			self.current_speed = yarp.Vector(self.get_num_joints(j))
@@ -77,6 +80,9 @@ class JointReader():
 			# copy values into ROS msg
 			self.joint_pos_msg = data_keys.set_joint_pos_msg_value(self.joint_pos_msg, data_keys.JointNames[j], self.current_position.toString(-1,1), self.get_num_joints(j))
 			self.joint_speed_msg = data_keys.set_joint_pos_msg_value(self.joint_speed_msg, data_keys.JointNames[j], self.current_speed.toString(-1,1), self.get_num_joints(j))
+		# release lock
+		lock.release()
+
 		if verbose:
 			end_time = time.time()
 			elapsed = end_time - start_time

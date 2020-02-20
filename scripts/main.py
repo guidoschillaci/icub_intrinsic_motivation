@@ -27,7 +27,7 @@ import random
 from cam_sim import Cam_sim
 from parameters import Parameters
 
-from doepy import build, read_write # pip install doepy - it may require also diversipy
+#from doepy import build, read_write # pip install doepy - it may require also diversipy
 
 import tensorflow as tf
 
@@ -48,15 +48,14 @@ class GoalBabbling():
 	def __init__(self):
 
 		# this simulates cameras and positions
-		self.cam_sim = Cam_sim("../romi_data/rgb_rectified")
+		self.cam_sim = Cam_sim("./romi_data/")
 		self.parameters = Parameters()
 
 		self.lock = threading.Lock()
 		signal.signal(signal.SIGINT, self.Exit_call)
 
 		print('Loading test dataset ', self.parameters.get('romi_dataset_pkl'))
-		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(
-			self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), step=self.parameters.get('romi_test_data_step'))
+		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), step=self.parameters.get('romi_test_data_step'))
 
 
 	def initialise(self, param):
@@ -84,7 +83,7 @@ class GoalBabbling():
 		self.current_goal_y = -1
 		self.current_goal_idx = -1
 #		self.goal_db = ['./sample_images/img_0.jpg','./sample_images/img_200.jpg','./sample_images/img_400.jpg','./sample_images/img_600.jpg','./sample_images/img_800.jpg','./sample_images/img_1000.jpg','./sample_images/img_1200.jpg','./sample_images/img_1400.jpg','./sample_images/img_1600.jpg' ]
-		self.goal_image = np.zeros((1, self.image_size, self.image_size, channels), np.float32)	
+		self.goal_image = np.zeros((1, param.get('image_size'), param.get('image_size'), param.get('image_channels')), np.float32)	
 
 		self.count = 1
 
@@ -100,7 +99,7 @@ class GoalBabbling():
 		print ('Current mse inverse code model: ', mse)
 		self.models.logger_inv.store_log(mse)
 
-	def log_current_fwd_mse(self):
+	def log_current_fwd_mse(self, param):
 		img_obs_code = self.models.encoder.predict(self.test_images[0:param.get('romi_test_size')])
 		img_pred_code = self.models.fwd_model.predict(self.test_pos[0:param.get('romi_test_size')])
 		mse = (np.linalg.norm(img_pred_code-img_obs_code) ** 2) /  param.get('romi_test_size')
@@ -113,8 +112,8 @@ class GoalBabbling():
 		for _ in range(param.get('max_iterations')):
 
 			# record logs and data
-			self.log_current_inv_mse()
-			self.log_current_fwd_mse()
+			self.log_current_inv_mse(param)
+			self.log_current_fwd_mse(param)
 
 			#print ('Mode ', self.goal_selection_mode, ' hist_size ', str(self.history_size), ' prob ', str(self.history_buffer_update_prob), ' iteration : ', self.iteration)
 			print ('Iteration ', self.iteration)
@@ -163,7 +162,7 @@ class GoalBabbling():
 			p.z = int(-90)
 			p.speed = int(1400)
 		
-			self.create_simulated_data(p, self.prev_pos)
+			self.create_simulated_data(p, self.prev_pos, param)
 			self.prev_pos=p
 			'''
 			if self.iteration % 50 == 0:
@@ -239,12 +238,14 @@ class GoalBabbling():
 
 		tr = self.cam_sim.get_trajectory(a,b)
 		trn = self.cam_sim.get_trajectory_names(a,b)
-
+		#print ('image size ', str(param.get('image_size')))
 		rounded  = self.cam_sim.round2mul(tr,5) # only images every 5mm
 		for i in range(len(tr)):
 			self.pos.append([float(rounded[i][0]) / x_lims[1], float(rounded[i][1]) / y_lims[1]] )
 			self.cmd.append([float(int(cmd.x)) / x_lims[1], float(int(cmd.y)) / y_lims[1]] )
 			cv2_img = cv2.imread(trn[i],1 )
+			
+			cv2.imshow('image',cv2_img)
 			if param.get('channels') ==1:
 				cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
 			cv2_img = cv2.resize(cv2_img,(param.get('image_size'), param.get('image_size')), interpolation = cv2.INTER_LINEAR)
@@ -303,7 +304,7 @@ if __name__ == '__main__':
 	parameters.set('exp_iteration', 0)
 	print ('Starting experiment')
 	goal_babbling.initialise(parameters)
-	goal_babbling.run_babbling()
+	goal_babbling.run_babbling(parameters)
 	print ('Experiment done')
 
 	'''

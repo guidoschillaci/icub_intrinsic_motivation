@@ -58,9 +58,12 @@ class Models:
 
 
     def load_autoencoder(self, param, train_images=None, train_offline=True):
-        cae_file = param.get('directory') + param.get('cae_filename')
-        e_file = param.get('directory') + param.get('encoder_filename')
-        d_file = param.get('directory') + param.get('decoder_filename')
+        #cae_file = param.get('directory') + param.get('cae_filename')
+        #e_file = param.get('directory') + param.get('encoder_filename')
+        #d_file = param.get('directory') + param.get('decoder_filename')
+	cae_file = './pretrained_models/' + param.get('cae_filename')
+        e_file = './pretrained_models/' + param.get('encoder_filename')
+        d_file = './pretrained_models/' + param.get('decoder_filename')
 
         autoencoder = []
         encoder = []
@@ -220,7 +223,7 @@ class Models:
         x = Dense(param.get('code_size'), activation='tanh')(input_code)
         x = Dense(param.get('code_size') * 10, activation='tanh')(x)
         x = Dense(param.get('code_size') * 10, activation='tanh')(x)
-        command = Dense(param.get('input_dim'), name='command')(x)
+        command = Dense(param.get('romi_input_dim'), name='command')(x)
 
         inv_model = Model(input_code, command)
         sgd = optimizers.SGD(lr=0.0014, decay=0.0, momentum=0.8, nesterov=True)
@@ -238,7 +241,8 @@ class Models:
 
 
     def load_som(self, param, encoder=None, train_images=None):
-        filename = param.get('directory') + param.get('som_filename')
+        #filename = param.get('directory') + param.get('som_filename')
+	filename = './pretrained_models/' + param.get('som_filename')
         print ('Looking for som file: ', filename)
         goal_som = None
         if os.path.isfile(filename):

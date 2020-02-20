@@ -5,20 +5,21 @@ import random
 
 class IntrinsicMotivation():
 
-	def __init__(self, goals_size, competence_measure = 'euclidean', decay_factor = 0.9):
+	def __init__(self, param, competence_measure = 'euclidean', decay_factor = 0.9):
+		self.param = param
 		self.learning_progress = 0.0 # interest factor for each goal
 		self.pe_history = [] # history of prediction errors for each goal
 		# self.pe_derivatives = [] # derivative of the prediction errors for each goal
 		self.competence_measure = competence_measure
-		self.goals_size = goals_size
+		
 		self.initialise_im()
 		self.decay_factor = decay_factor
-		if goals_size <=0:
-			print ("Error: goals_size <=0")
+		if self.param.get('goal_size') <=0:
+			print ("Error: goal_size <=0")
 
 	def initialise_im(self):
-		self.learning_progress= np.resize(self.learning_progress, (self.goals_size*self.goals_size ,))
-		for i in range (0, self.goals_size*self.goals_size):
+		self.learning_progress= np.resize(self.learning_progress, (self.param.get('goal_size')*self.param.get('goal_size') ,))
+		for i in range (0, self.param.get('goal_size')*self.param.get('goal_size')):
 			self.pe_history.append([0.0])
 			#self.pe_derivatives.append([0.0])
 		print ("interest model initialised. PE history size: ", len(self.pe_history))
@@ -32,11 +33,11 @@ class IntrinsicMotivation():
 			print ('Interest Model: Selected most interesting goal.')
 		else:
 			# select random goal
-			goal_idx = random.randint(0, self.goals_size*self.goals_size-1)
+			goal_idx = random.randint(0, self.param.get('goal_size')*self.param.get('goal_size')-1)
 			print ('Interest Model: Selected random goal.')
 
-		goal_x =int( goal_idx / self.goals_size  )
-		goal_y = goal_idx % self.goals_size
+		goal_x =int( goal_idx / self.param.get('goal_size')  )
+		goal_y = goal_idx % self.param.get('goal_size')
 		print ('Goal idx: ', goal_idx, ' x: ', goal_x, ' y: ', goal_y)
 		return goal_idx, goal_x, goal_y
 
@@ -45,8 +46,8 @@ class IntrinsicMotivation():
 		# decay all
 		self.learning_progress = self.decay_factor * self.learning_progress
 
-		goal_id = int(goal_id_x * self.goals_size + goal_id_y)
-		if (goal_id <0 or goal_id>(self.goals_size*self.goals_size)):
+		goal_id = int(goal_id_x * self.goal_size + goal_id_y)
+		if (goal_id <0 or goal_id>(self.param.get('goal_size')*self.param.get('goal_size'))):
 			print ("Interest model error, wrong goal id: ", goal_id)
 		# self.interest_factors -= 0.05 # decrease all
 		#low_vals = self.learning_progress < 0
@@ -81,7 +82,7 @@ class IntrinsicMotivation():
 #			self.learning_progress = self.learning_progress / sum_lp
 
 	def get_learning_progress(self, x, y):
-		return self.learning_progress[x * self.goals_size + y]
+		return self.learning_progress[x * self.param.get('goal_size') + y]
 
 	def get_all_progresses(self):
 		return self.learning_progress
