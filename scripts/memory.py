@@ -28,10 +28,10 @@ class Memory:
     def update(self, input, output):
 
         counter_of_changed_elements = 0
-
+	#print ('memory ', np.asarray(input).shape)
         if self.parameters.get('memory_size') != 0:
             # if the size of the stored samples has not reached the full size of the memory, then just append the samples
-            if len(self.input) < self.parameters.get('memory_size'):
+            if len(self.input_variables) < self.parameters.get('memory_size'):
                 self.input_variables.append(input)
                 self.output_variables.append(output)
                 self.prediction_errors.append([])

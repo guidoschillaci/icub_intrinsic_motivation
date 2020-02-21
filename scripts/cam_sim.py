@@ -123,7 +123,7 @@ if __name__ == '__main__':
 			#print path+'/'+os.path.relpath(file)
 			cv_img = cv2.imread(path+'/'+os.path.relpath(file))
 			if channels ==1:
-				cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+				cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
 			cv_img = cv2.resize(cv_img, (64, 64))
 			#image_msg= bridge.cv2_to_imgmsg(cv_img, "bgr8")
 			#samples.append({'image': image_msg, 'position':p, 'command':p})

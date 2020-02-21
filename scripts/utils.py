@@ -3,7 +3,7 @@ import gzip
 import pickle
 import cv2
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 x_lims=[0.0,750.0]
 y_lims=[0.0,750.0]
@@ -59,7 +59,7 @@ def parse_data( file_name, pixels, reshape, channels=1):
 		count = 0
 		for memory in memories:
 			image = memory['image']
-			if channels == 1:
+			if (channels == 1) and (image.ndim == 3):
 				image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 			image = cv2.resize(image, (pixels, pixels))
 

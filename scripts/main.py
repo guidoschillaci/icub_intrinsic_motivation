@@ -29,18 +29,19 @@ from parameters import Parameters
 
 #from doepy import build, read_write # pip install doepy - it may require also diversipy
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 GPU_FRACTION = 0.7
 
-if tf.__version__ < "1.8.0":
-    config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = GPU_FRACTION
-    session = tf.Session(config=config)
-else:
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = GPU_FRACTION
-    session = tf.compat.v1.Session(config=config)
+print ('Tensorflow version ', str(tf.__version__))
+#if tf.__version__ < "1.14.0":
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = GPU_FRACTION
+session = tf.Session(config=config)
+#else:
+#    config = tf.compat.v1.ConfigProto()
+#    config.gpu_options.per_process_gpu_memory_fraction = GPU_FRACTION
+#    session = tf.compat.v1.Session(config=config)
 
 
 class GoalBabbling():
@@ -195,14 +196,14 @@ class GoalBabbling():
 			# first update the memory, then update the models
 			observed_pos = self.pos[-1]
 			observed_img = self.img[-1]
-			observed_img_code = self.models.encoder.predict(observed_img)
+			observed_img_code = np.asarray(self.models.encoder.predict(observed_img.reshape(1, param.get('image_size'), param.get('image_size'), param.get('image_channels')))).reshape(param.get('code_size'))
 			self.models.memory_fwd.update(observed_pos, observed_img_code)
 			self.models.memory_inv.update(observed_img_code, observed_pos)
 
 			# fit models	
 			if (len(self.img) > param.get('batch_size')) and (len(self.img) == len(self.pos)):
 
-				observed_codes_batch = self.models.encoder.predict(self.img[-(param.get('batch_size')):]  )
+				observed_codes_batch = self.models.encoder.predict(np.asarray(self.img[-(param.get('batch_size')):]).reshape(param.get('batch_size'), param.get('image_size'), param.get('image_size'), param.get('image_channels'))  )
 				observed_pos_batch = self.pos[-(param.get('batch_size')):]
 
 				# fit the model with the current batch of observations and the memory!
@@ -210,8 +211,8 @@ class GoalBabbling():
 				obs_and_mem_pos = np.vstack((np.asarray(observed_pos_batch), np.asarray(self.models.memory_fwd.input_variables)))
 				obs_and_mem_img_codes = np.vstack((np.asarray(observed_codes_batch), np.asarray(self.models.memory_fwd.output_variables)))
 
-				self.models.train_forward_code_model_on_batch(self.models.fwd_model, obs_and_mem_pos, obs_and_mem_img_codes, params)
-				self.models.train_inverse_code_model_on_batch(self.models.inv_model, obs_and_mem_img_codes, obs_and_mem_pos, params)
+				self.models.train_forward_code_model_on_batch(self.models.fwd_model, obs_and_mem_pos, obs_and_mem_img_codes, param)
+				self.models.train_inverse_code_model_on_batch(self.models.inv_model, obs_and_mem_img_codes, obs_and_mem_pos, param)
 
 				#train_autoencoder_on_batch(self.autoencoder, self.encoder, self.decoder, np.asarray(self.img[-32:]).reshape(32, self.image_size, self.image_size, self.channels), batch_size=self.batch_size, cae_epochs=5)
 
@@ -243,10 +244,9 @@ class GoalBabbling():
 		for i in range(len(tr)):
 			self.pos.append([float(rounded[i][0]) / x_lims[1], float(rounded[i][1]) / y_lims[1]] )
 			self.cmd.append([float(int(cmd.x)) / x_lims[1], float(int(cmd.y)) / y_lims[1]] )
-			cv2_img = cv2.imread(trn[i],1 )
-			
+			cv2_img = cv2.imread(trn[i])#,1 )
 			cv2.imshow('image',cv2_img)
-			if param.get('channels') ==1:
+			if param.get('image_channels') ==1:
 				cv2_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
 			cv2_img = cv2.resize(cv2_img,(param.get('image_size'), param.get('image_size')), interpolation = cv2.INTER_LINEAR)
 			cv2_img = cv2_img.astype('float32') / 255
