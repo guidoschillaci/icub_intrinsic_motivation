@@ -303,7 +303,7 @@ class Models:
         som_file = h5py.File('./models/goal_som.h5', 'w')
         som_file.create_dataset('goal_som', data=som_weights)
         som_file.close()
-        
+
 
 
         '''

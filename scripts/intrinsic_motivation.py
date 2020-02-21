@@ -2,92 +2,98 @@
 # Guido Schillaci <guido.schillaci@santannapisa.it>
 import numpy as np
 import random
+import sys
+from sklearn.linear_model import LinearRegression
 
 class IntrinsicMotivation():
 
-	def __init__(self, param, competence_measure = 'euclidean', decay_factor = 0.9):
+	def __init__(self, param):
 		self.param = param
-		self.learning_progress = 0.0 # interest factor for each goal
-		self.pe_history = [] # history of prediction errors for each goal
+		#self.learning_progress = 0.0 # interest factor for each goal
+
+		self.pe_buffer = [] # buffer of prediction errors for each goal. Its size is dynamic!
+		self.pe_max_buffer_size_history = [] # keep track of the buffer size over time (same size for all goals)
+		self.pe_max_buffer_size_history.append(param.get('im_initial_pe_buffer_size'))
+
+		self.slopes_pe_dynamics = [] # for each goal, keeps track of the trends of the PE_dynamics (slope of the regression over the pe_buffer)
+
 		# self.pe_derivatives = [] # derivative of the prediction errors for each goal
-		self.competence_measure = competence_measure
-		
-		self.initialise_im()
-		self.decay_factor = decay_factor
+		#self.competence_measure = param.get('im_competence_measure')
+		#self.decay_factor = param.get('im_decay_factor')
+
 		if self.param.get('goal_size') <=0:
 			print ("Error: goal_size <=0")
+			sys.exit(1)
 
-	def initialise_im(self):
-		self.learning_progress= np.resize(self.learning_progress, (self.param.get('goal_size')*self.param.get('goal_size') ,))
-		for i in range (0, self.param.get('goal_size')*self.param.get('goal_size')):
-			self.pe_history.append([0.0])
+		#self.learning_progress= np.resize(self.learning_progress, (self.param.get('goal_size')*self.param.get('goal_size') ,))
+		#for i in range (0, self.param.get('goal_size')*self.param.get('goal_size')):
+	#		self.pe_history.append([0.0])
 			#self.pe_derivatives.append([0.0])
-		print ("interest model initialised. PE history size: ", len(self.pe_history))
+		print ("Intrinsic motivation initialised. PE buffer size: ", len(self.pe_buffer))
 
 	def select_goal(self):
 		ran = random.random()
 		goal_idx = 0
-		if ran < 0.85 and np.sum(self.learning_progress)>0: # 70% of the times
-			# select goal with highest interest factor			
-			goal_idx = self.get_most_interesting_goal_index()
-			print ('Interest Model: Selected most interesting goal.')
-		else:
+		if ran < self.param.get('im_random_goal_prob'):
 			# select random goal
-			goal_idx = random.randint(0, self.param.get('goal_size')*self.param.get('goal_size')-1)
-			print ('Interest Model: Selected random goal.')
+			goal_idx = random.randint(0, self.param.get('goal_size') * self.param.get('goal_size') - 1)
+			print ('Interest Model: Selected random goal. Id: ', goal_idx)
+		else:
+		#if ran < 0.85 and np.sum(self.learning_progress)>0: # 70% of the times
+			# select best goal
+			goal_idx = self.get_best_goal_index()
+			print ('Intrinsic motivation: Selected goal id: ', goal_idx)
 
 		goal_x =int( goal_idx / self.param.get('goal_size')  )
 		goal_y = goal_idx % self.param.get('goal_size')
-		print ('Goal idx: ', goal_idx, ' x: ', goal_x, ' y: ', goal_y)
+		print ('Goal_SOM coords: ', goal_idx, ' x: ', goal_x, ' y: ', goal_y)
 		return goal_idx, goal_x, goal_y
 
-	def update_errors(self, goal_id_x, goal_id_y, prediction_error):
+	def update_max_pe_buffer_size(self):
+		if self.param.get('im_fixed_pe_buffer_size'):
+			self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
+		else:
+			new_buffer_size = 0.0 # TODO: make it dependent on the overall PE reduction trend
+			self.pe_max_buffer_size_history.append(new_buffer_size)
 
-		# decay all
-		self.learning_progress = self.decay_factor * self.learning_progress
-
-		goal_id = int(goal_id_x * self.goal_size + goal_id_y)
+	def get_goal_id(self, id_x, id_y):
+		goal_id = int(id_x * self.param.get('goal_size') + id_y)
 		if (goal_id <0 or goal_id>(self.param.get('goal_size')*self.param.get('goal_size'))):
-			print ("Interest model error, wrong goal id: ", goal_id)
-		# self.interest_factors -= 0.05 # decrease all
-		#low_vals = self.learning_progress < 0
-		#self.learning_progress[low_vals] = 0
-#		self.pe_history[goal_id].append(np.power(prediction_error,2))
-		self.pe_history[goal_id].append(prediction_error)
-		ped = 0
-		if len(self.pe_history[goal_id]) >= 2:
+			print ("Intrinsic motivation error, wrong goal id: ", goal_id)
+			sys.exit(1)
+		return goal_id
 
-			if self.competence_measure == "euclidean":
-				ped = prediction_error-self.pe_history[goal_id][-2] 
-				#self.pe_derivatives[goal_id].append(ped)
-				self.learning_progress[goal_id] = np.tanh( np.fabs(ped)*2 )
+	def update_error_dynamics(self, goal_id_x, goal_id_y, prediction_error):
+		# decay all
+		#self.learning_progress = self.decay_factor * self.learning_progress
+		goal_id = self.get_goal_id(goal_id_x, goal_id_y)
 
-			elif self.competence_measure == "exponential":
-				# Measure from: C. Moulin-Frier, S. M. Nguyen, and P.-Y. Oudeyer. Self-organization of early vocal development in infants and machines: the role of intrinsic motivation. Frontiers in psychology, 4,2013.
-				ped = prediction_error-self.pe_history[goal_id][-2]
-				self.learning_progress[goal_id] = np.exp( - np.fabs (ped) )
+		# append the current predction error to the current goal
+		self.pe_buffer[goal_id].append(prediction_error)
 
+		# for each goal
+		# - check that all the buffers are within the max buffer size
+		# - compute regression on prediction error and save the slope (trend of error dynamics)
+		current_slopes_err_dynamics = []
+		for i in range(len(self.param.get('goal_size')*self.param.get('goal_size'))):
+			while len(self.pe_buffer[i]) > self.pe_max_buffer_size_history[-1]:
+				self.pe_buffer[i].pop(0) #remove first element
+			if len(self.pe_buffer[i]) < 2 : # not enough prediction error to calculate the regression
+				current_slopes_err_dynamics.append(0)
 			else:
-				print ('wrong competence measure! Specify either euclidean or exponential')
+				# get the slopes of the prediction error dynamics
+				regr_x = range(len(self.pe_buffer[i]))
+				print ('calculating regression on goal ', str(i))
+				model = LinearRegression().fit(regr_x, self.pe_buffer[i])
+				current_slopes_err_dynamics.append(model.coef_[0]) # add the slope of the regression
 
-			print ('Learning progress of goal [0-1] ', goal_id, ', idx: ', goal_id_x, ' idy:', goal_id_y, ' is: ', self.learning_progress[goal_id], ' ped ', ped, ' PE: ', prediction_error)
+		self.slopes_pe_dynamics.append(current_slopes_err_dynamics)
+		print ('slopes', self.slopes_pe_dynamics)
 
-			# interest_factors = interest_factors / np.sum(interest_factors)
-			# threshold interest factor
-			if self.learning_progress[goal_id] < 0.01:
-				self.learning_progress[goal_id] = 0.0
-				print ('Learning process on goal', goal_id, ' set to 0')
-#		sum_lp = np.sum(self.learning_progress)
-#		if sum_lp !=0:
-#			self.learning_progress = self.learning_progress / sum_lp
 
-	def get_learning_progress(self, x, y):
-		return self.learning_progress[x * self.param.get('goal_size') + y]
+	# get the index of the goal associated with the lowest slope in the prediction error dynamics
+	def get_best_goal_index(self):
+		return np.argmin(self.slopes_pe_dynamics)
 
-	def get_all_progresses(self):
-		return self.learning_progress
 
-	# get most interesting goal index
-	def get_most_interesting_goal_index(self):
-		return np.argmax(self.learning_progress)
-
+	def save_slopes_pe_dynamics(self):

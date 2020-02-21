@@ -18,11 +18,11 @@ class Parameters:
             'directory': '',
             'image_size': 64,
             'image_channels': 1,
-            'code_size': 32,
-            'goal_size': 3,
+            'code_size': 32, # dimensions of the latent space of convoltioanl autoencoder
+            'goal_size': 3, # SOMs size. There will be goal_size*goal_size  goal. TODO: improve this
 
-            'batch_size':16,
-            'epochs': 1, # online fwd/inv models learning
+            'batch_size':16, # for the fwd/inv models update
+            'epochs': 1, # online fwd/inv models
             'goal_selection_mode':'som',
             'exp_iteration': 0,
 
@@ -48,6 +48,12 @@ class Parameters:
 
             'random_cmd_flag': False,
             'random_cmd_rate': 0.3,
+
+            'im_competence_measure': 'euclidean',
+            'im_decay_factor': 0.9,
+            'im_initial_pe_buffer_size': 10, # initial size of the prediction error buffer
+            'im_fixed_pe_buffer_size': True, # force a fixed PE buffer size or make it dependent on the overall PE reduction trend?
+            'im_random_goal_prob': 0.0, # probability of selecting a random goal instead of the best one
 
             'loss': 'mean_squared_error',
             'optimizer': 'adam',
