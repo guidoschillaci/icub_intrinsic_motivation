@@ -9,7 +9,7 @@ import cv2
 from models import Models
 from intrinsic_motivation import IntrinsicMotivation
 
-from plots import plot_exploration, plot_learning_progress, plot_log_goal_inv, plot_log_goal_fwd, plot_simple, plot_learning_comparisons
+from plots import plot_exploration, plot_learning_progress, plot_log_goal_inv, plot_log_goal_fwd,  plot_learning_comparisons
 
 # from cv_bridge import CvBridge, CvBridgeError
 import random
@@ -46,21 +46,21 @@ session = tf.Session(config=config)
 
 class GoalBabbling():
 
-	def __init__(self):
+	def __init__(self, param):
 
 		# this simulates cameras and positions
 		self.cam_sim = Cam_sim("./romi_data/")
-		self.parameters = Parameters()
+		self.parameters = param
 
 		self.lock = threading.Lock()
 		signal.signal(signal.SIGINT, self.Exit_call)
 
 		print('Loading test dataset ', self.parameters.get('romi_dataset_pkl'))
-		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), step=self.parameters.get('romi_test_size'))
+		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), test_size=self.parameters.get('romi_test_size'))
 
 
 	def initialise(self, param):
-
+		self.parameters = param
 		self.intrinsic_motivation = IntrinsicMotivation(param)
 		self.models = Models(param)
 
@@ -256,10 +256,8 @@ class GoalBabbling():
 
 	def save_models(self, param):
 		self.models.save_models(param)
-
 		print ('Models saved')
-		self.goto_starting_pos()
-
+		
 	def clear_session(self):
 		# reset
 		print('Clearing TF session')
@@ -269,8 +267,10 @@ class GoalBabbling():
 			tf.compat.v1.reset_default_graph()
 
 	def Exit_call(self, signal, frame):
+		self.save_models(self.parameters)
+		self.models.save_logs(self.parameters)
 		self.goto_starting_pos()
-		self.save_models()
+		sys.exit(1)
 
 	def get_starting_pos(self):
 		p = Position()
@@ -282,7 +282,7 @@ class GoalBabbling():
 
 	def goto_starting_pos(self):
 		p = self.get_starting_pos()
-		self.create_simulated_data(p, self.prev_pos)
+		self.create_simulated_data(p, self.prev_pos, self.parameters)
 		self.prev_pos=p
 
 
@@ -295,12 +295,21 @@ if __name__ == '__main__':
 	else:
 		tf.compat.v1.reset_default_graph()
 
-	goal_babbling = GoalBabbling()
-
 	parameters = Parameters()
 	parameters.set('goal_selection_mode', 'som')
 	parameters.set('exp_iteration', 0)
+	
+	goal_babbling = GoalBabbling(parameters)
+	parameters.set('results_directory', './results/')
+	
+	if not os.path.exists(parameters.get('results_directory')):
+		print ('creating folders')	
+		os.makedirs(parameters.get('results_directory'))
+		os.makedirs(parameters.get('results_directory')+'plots')
+		
 	print ('Starting experiment')
+		
+	# if running different experiments, you can re-set parameters with initialise
 	goal_babbling.initialise(parameters)
 	goal_babbling.run_babbling(parameters)
 	print ('Experiment done')

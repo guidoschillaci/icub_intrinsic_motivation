@@ -287,20 +287,23 @@ class Models:
         return goal_som
 
     def save_logs(self, show=True):
-        self.logger_fwd.save_log(show=show)
-        self.logger_inv.save_log(show=show)
+        self.logger_fwd.save_log()
+	self.logger_fwd.plot_mse(show=show)
+
+        self.logger_inv.save_log()
+	self.logger_inv.plot_mse(show=show)
 
     def save_models(self, param):
 
-        self.autoencoder.save('./models/autoencoder.h5', overwrite=True)
-        self.encoder.save('./models/encoder.h5', overwrite=True)
-        self.decoder.save('./models/decoder.h5', overwrite=True)
-        self.inv_model.save('./models/inv_model.h5', overwrite=True)
-        self.fwd_model.save('./models/fwd_model.h5', overwrite=True)
+        self.autoencoder.save(param.get('results_directory')+'autoencoder.h5', overwrite=True)
+        self.encoder.save(param.get('results_directory')+'encoder.h5', overwrite=True)
+        self.decoder.save(param.get('results_directory')+'decoder.h5', overwrite=True)
+        self.inv_model.save(param.get('results_directory')+'inv_model.h5', overwrite=True)
+        self.fwd_model.save(param.get('results_directory')+'fwd_model.h5', overwrite=True)
 
         # save som
         som_weights = self.goal_som.get_weights().copy()
-        som_file = h5py.File('./models/goal_som.h5', 'w')
+        som_file = h5py.File(param.get('results_directory')+'goal_som.h5', 'w')
         som_file.create_dataset('goal_som', data=som_weights)
         som_file.close()
         
