@@ -16,6 +16,7 @@ class Parameters:
     def __init__(self):
         self.dictionary = {
             'directory': '',
+            'results_directory': '',
             'image_size': 64,
             'image_channels': 1,
             'code_size': 32, # dimensions of the latent space of convoltioanl autoencoder
