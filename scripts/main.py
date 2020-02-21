@@ -185,7 +185,7 @@ class GoalBabbling():
 				prediction_code = self.models.fwd_model.predict(np.asarray(cmd).reshape((1,2)))
 
 				prediction_error = np.linalg.norm(np.asarray(self.goal_code[:])-np.asarray(prediction_code[:]))
-				self.intrinsic_motivation.update_errors(self.current_goal_x, self.current_goal_y, prediction_error)
+				self.intrinsic_motivation.update_error_dynamics(self.current_goal_x, self.current_goal_y, prediction_error)
 				#print 'Prediction error: ', prediction_error, ' learning progress: ', self.interest_model.get_learning_progress(self.current_goal_x, self.current_goal_y)
 		
 				#self.log_lp.append(np.asarray(deepcopy(self.intrinsic_motivation.learning_progress)))
@@ -256,6 +256,9 @@ class GoalBabbling():
 
 	def save_models(self, param):
 		self.models.save_models(param)
+		self.models.save_logs(self.parameters)
+		self.intrinsic_motivation.save_im()
+		self.intrinsic_motivation.plot_slopes()
 		print ('Models saved')
 		
 	def clear_session(self):
@@ -268,7 +271,6 @@ class GoalBabbling():
 
 	def Exit_call(self, signal, frame):
 		self.save_models(self.parameters)
-		self.models.save_logs(self.parameters)
 		self.goto_starting_pos()
 		sys.exit(1)
 

@@ -4,6 +4,7 @@ import numpy as np
 import random
 import sys
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
 
 class IntrinsicMotivation():
 
@@ -16,6 +17,8 @@ class IntrinsicMotivation():
 		self.pe_max_buffer_size_history.append(param.get('im_initial_pe_buffer_size'))
 
 		self.slopes_pe_dynamics = [] # for each goal, keeps track of the trends of the PE_dynamics (slope of the regression over the pe_buffer)
+
+		self.goal_id_history = [] # keep track of the goals that have been selected over time
 
 		# self.pe_derivatives = [] # derivative of the prediction errors for each goal
 		#self.competence_measure = param.get('im_competence_measure')
@@ -67,6 +70,8 @@ class IntrinsicMotivation():
 		# decay all
 		#self.learning_progress = self.decay_factor * self.learning_progress
 		goal_id = self.get_goal_id(goal_id_x, goal_id_y)
+		# keep track of the goal that have been selected
+		self.goal_id_history.append(goal_id)
 
 		# append the current predction error to the current goal
 		self.pe_buffer[goal_id].append(prediction_error)
@@ -96,4 +101,31 @@ class IntrinsicMotivation():
 		return np.argmin(self.slopes_pe_dynamics)
 
 
-	def save_slopes_pe_dynamics(self):
+	def save_im(self):
+		np.save(os.path.join(self.parameters.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_dynamics)
+		np.save(os.path.join(self.parameters.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)
+		np.save(os.path.join(self.parameters.get('results_directory'), 'im_goal_id_history'), self.goal_id_history)
+
+	def plot_slopes(self, save=True, show=True):
+		fig = plt.figure(figsize=(10, 10))
+		num_goals= self.param.get('goal_size')*self.param.get('goal_size')
+		ax1 = plt.subplot(num_goals + 1, 1, 1)
+		plt.plot(self.goal_id_history)
+		plt.ylim(1, num_goals)
+		plt.ylabel('goal id')
+		plt.xlabel('time')
+		ax1.set_yticks(np.arange(0, num_goals))
+		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
+
+		#data = np.transpose(log_lp)
+		data = np.transpose(self.slopes_pe_dynamics)
+		for i in range(0, num_goals):
+			ax = plt.subplot(num_goals + 1, 1, i + 2)
+			plt.plot(data[i])
+			plt.ylabel('g{}'.format(i))
+
+		if save:
+			plt.savefig(self.parameters.get('results_directory')+'/plots/im_slopes_pe_dynamics.jpg')
+		if show:
+			plt.show()
+		plt.close()
