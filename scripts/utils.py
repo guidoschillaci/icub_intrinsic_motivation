@@ -82,18 +82,24 @@ def parse_data( file_name, pixels, reshape, channels=1):
 
 #### utility functions for reading visuo-motor data from the ROMI dataset
 # https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def load_data( dataset, image_size, step):
+def load_data( dataset, image_size, test_size=100):
 
 	images, commands, positions = parse_data(dataset, reshape=True, pixels = image_size)
 	# split train and test data
-	indices = range(0, len(positions), step) ## TODO: choose random samples instead!
+	#indices = range(0, len(positions), step) # choose random samples instead!
+	test_indexes = np.random.choice(range(len(positions)), test_size)
+
+	# print ('test idx' + str(test_indexes))
+	train_indexes = np.ones(len(positions), np.bool)
+	train_indexes[test_indexes] = 0
+
 	# split images
-	test_images = images[indices]
-	train_images = images
-	test_cmds = commands[indices]
-	train_cmds = commands
-	test_pos = positions[indices]
-	train_pos = positions
+	test_images = images[test_indexes]
+	train_images = images[train_indexes]
+	test_cmds = commands[test_indexes]
+	train_cmds = commands[train_indexes]
+	test_pos = positions[test_indexes]
+	train_pos = positions[train_indexes]
 	print ("number of train images: ", len(train_images))
 	print ("number of test images: ", len(test_images))
 

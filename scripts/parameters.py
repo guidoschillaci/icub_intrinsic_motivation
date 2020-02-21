@@ -38,8 +38,8 @@ class Parameters:
 
             'romi_input_dim': 2,
             'romi_dataset_pkl': 'romi_data/compressed_dataset.pkl',
-            'romi_test_data_step': 500,
-            'romi_test_size': 50,
+            #'romi_test_data_step': 500,
+            'romi_test_size': 100,
 
             'fwd_filename': 'forward_code_model.h5',
             'inv_filename': 'inverse_code_model.h5',

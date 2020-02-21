@@ -1,9 +1,11 @@
 import numpy as np
 from copy import deepcopy
+import matplotlib as plt
 
 class Logger:
 
-    def __init__(self, param):
+    def __init__(self, param, name):
+        self.name = name
         self.parameters = param
         # contains the list of MSE calculation over time
         self.mse = []
@@ -27,3 +29,22 @@ class Logger:
 
     def get_iteration_count(self):
         return len(self.mse)
+
+    def save_log(self):
+        exp_name = 'mse_' + self.name
+        np.save(os.path.join(self.parameters.get('directory'), exp_name), self.mse)
+
+    def plot_mse(self, save = True, show = False):
+        fig2 = plt.figure(figsize=(10, 10))
+        plt.plot(self.mse)
+        plt_name = 'MSE ' + self.name
+        plt.title(plt_name)
+        plt.ylabel('MSE')
+        plt.xlabel('Time')
+
+        if save:
+            filename = self.parameters.get('directory')+'/plots/' + plt_name + '.jpg'
+        plt.savefig(filename)
+        if show:
+            plt.show()
+        plt.close()

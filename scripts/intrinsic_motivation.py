@@ -41,7 +41,7 @@ class IntrinsicMotivation():
 		print ('Goal idx: ', goal_idx, ' x: ', goal_x, ' y: ', goal_y)
 		return goal_idx, goal_x, goal_y
 
-	def update_competences(self, goal_id_x, goal_id_y, prediction_error):
+	def update_errors(self, goal_id_x, goal_id_y, prediction_error):
 
 		# decay all
 		self.learning_progress = self.decay_factor * self.learning_progress

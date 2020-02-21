@@ -50,11 +50,11 @@ class Models:
         # probability of substituting an element of the memory with the current observation
         self.prob_update = self.parameters.get('memory_update_probability')
         self.memory_fwd = memory.Memory(param = self.parameters)
-        self.memory_inv = memory.Memory(param=self.parameters)
+        self.memory_inv = memory.Memory(param = self.parameters)
 
         # initialise loggers
-        self.logger_fwd = logger.Logger(param = self.parameters)
-        self.logger_inv = logger.Logger(param = self.parameters)
+        self.logger_fwd = logger.Logger(param = self.parameters, name='fwd')
+        self.logger_inv = logger.Logger(param = self.parameters, name='inv')
 
 
     def load_autoencoder(self, param, train_images=None, train_offline=True):
@@ -286,9 +286,26 @@ class Models:
             print("SOM trained and saved!")
         return goal_som
 
+    def save_logs(self, show=True):
+        self.logger_fwd.save_log(show=show)
+        self.logger_inv.save_log(show=show)
 
     def save_models(self, param):
-        pass
+
+        self.autoencoder.save('./models/autoencoder.h5', overwrite=True)
+        self.encoder.save('./models/encoder.h5', overwrite=True)
+        self.decoder.save('./models/decoder.h5', overwrite=True)
+        self.inv_model.save('./models/inv_model.h5', overwrite=True)
+        self.fwd_model.save('./models/fwd_model.h5', overwrite=True)
+
+        # save som
+        som_weights = self.goal_som.get_weights().copy()
+        som_file = h5py.File('./models/goal_som.h5', 'w')
+        som_file.create_dataset('goal_som', data=som_weights)
+        som_file.close()
+        
+
+
         '''
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%X')
         name = 'goal_babbling'
@@ -307,14 +324,6 @@ class Models:
 
         np.savetxt('./models/log_goal_id.txt', self.log_goal_id)
 
-        np.savetxt('./models/log_mse_inv.txt', self.mse_inv)
-        plot_simple(self.mse_inv, 'MSE INV', save=True, show=False)
-
-        np.savetxt('./models/log_mse_fwd.txt', self.mse_fwd)
-        plot_simple(self.mse_fwd, 'MSE FWD', save=True, show=False)
-
-        np.savetxt('./models/log_cvh_inv.txt', self.log_cvh_inv)
-        plot_simple(self.log_cvh_inv, 'CVH Inv Volume', save=True, show=False)
 
         plot_learning_progress(self.log_lp, self.log_goal_id, num_goals=self.goal_size * self.goal_size, save=True,
                                show=False)

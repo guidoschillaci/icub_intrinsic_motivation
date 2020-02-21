@@ -26,81 +26,36 @@ def imscatter(x, y, ax, imageData, zoom, imageSize):
 	ax.update_datalim(np.column_stack([x, y]))
 	ax.autoscale()
 
-def plot_cvh(convex_hull, dimensions, title, iteration, log_goal, num_goals, save = True, show = False):
+def plot_exploration(positions, goals, iteration, param, save = True, show = False):
+	title = param.get('goal_selection_mode')+'_'+str(iteration)
 	fig2 = plt.figure(figsize=(10, 10))
-	print (log_goal)
-	if dimensions ==2:
-
-		#g = []
-		#for i in range(0, num_goals):
-	#		ax=plt.subplot(num_goals, 1, i+1)
-#			print log_goal[i]#
-#			g.append(log_goal[i])
-#		print 'g ',g
-		plt.scatter(convex_hull.points[:,0],convex_hull.points[:,1], s=2, color='g')
-#		for simplex in convex_hull.simplices:
-			#plt.plot(convex_hull.points[simplex, 0], convex_hull.points[simplex, 1], 'k-')
-		#print 'log_goal[:,0] ', log_goal[:,0]
-		#print 'log_goal[:,1] ', log_goal[:,1]
-
-		plt.plot( np.asarray(log_goal[:,0]).astype('float32'), np.asarray(log_goal[:,1]).astype('float32'), 'ro')
-		plt.plot(  np.hstack(( convex_hull.points[convex_hull.vertices,0], convex_hull.points[convex_hull.vertices[-1:1],0] )) , np.hstack((convex_hull.points[convex_hull.vertices,1] , convex_hull.points[convex_hull.vertices[-1:1],1])), 'r--', lw=2)
+	#print (log_goal)
+	if param.get('romi_input_dim') ==2:
+		plt.scatter(positions[:,0],positions[:,1], s=2, color='g')
+		plt.plot( np.asarray(goals[:,0]).astype('float32'), np.asarray(goals[:,1]).astype('float32'), 'ro')
 
 		plt.xlabel('Pos x')
 		plt.ylabel('Pos y')
 		plt.xlim(-0.2,1.2)
 		plt.ylim(-0.2,1.2)
-	elif dimensions==4:
-
-		#print 'log_goal[:,2] ', log_goal[:,2]
-		#print 'log_goal[:,3] ', log_goal[:,3]
-		cv_a_points = convex_hull.points[:,0:2]
-		cv_a = ConvexHull(cv_a_points)
-		cv_b_points = convex_hull.points[:,2:4]
-		cv_b = ConvexHull(cv_b_points)
-
+	elif param.get('romi_input_dim')==4:
 		plt.subplot(1,2,1)
-		plt.scatter(cv_a.points[:,0],cv_a.points[:,1], s=2, color='g')
-		#for simplex in convex_hull.simplices:
-			#plt.plot(convex_hull.points[simplex, 0], convex_hull.points[simplex, 1], 'k-')
-		plt.plot( np.hstack((cv_a.points[cv_a.vertices,0],cv_a.points[cv_a.vertices[-1:1],0])), np.hstack(( cv_a.points[cv_a.vertices,1], cv_a.points[cv_a.vertices[-1:1],1])) , 'r--', lw=2)
-
-	#	g = []
-	#	for i in range(0, num_goals):
-	#		ax=plt.subplot(num_goals, 1, i+1)
-	#		g.append(log_goal[i])
-		plt.plot( np.asarray(log_goal[:,0]).astype('float32'), np.asarray(log_goal[:,1]).astype('float32'), 'ro')
+		plt.scatter(positions[:,0],positions[:,1], s=2, color='g')
+		plt.plot( np.asarray(goals[:,0]).astype('float32'), np.asarray(goals[:,1]).astype('float32'), 'ro')
 		plt.xlim(-0.4,0.4)
 		plt.ylim(-0.4,0.4)
 		plt.xlabel('Dim 0')
 		plt.ylabel('Dim 1')
 		plt.subplot(1,2,2)
-		plt.scatter(cv_b.points[:,0],cv_b.points[:,1], s=2, color='g')
-		plt.plot(np.asarray( log_goal[:,2]).astype('float32'), np.asarray(log_goal[:,3]).astype('float32'), 'ro')
-	#	for simplex in convex_hull.simplices:
-			#plt.plot(convex_hull.points[simplex, 2], convex_hull.points[simplex, 3], 'k-')
-		plt.plot( np.hstack((cv_b.points[cv_b.vertices,0],cv_b.points[cv_b.vertices[-1:1],0])), np.hstack(( cv_b.points[cv_b.vertices,1],cv_b.points[cv_b.vertices[-1:1],1])), 'r--', lw=2)
-
+		plt.scatter(positions[:,0],positions[:,1], s=2, color='g')
+		plt.plot(np.asarray( goals[:,2]).astype('float32'), np.asarray(goals[:,3]).astype('float32'), 'ro')
 		plt.xlim(-0.4,0.4)
 		plt.ylim(-0.4,0.4)
 		plt.xlabel('Dim 2')
 		plt.ylabel('Dim 3')
 
 	if save:
-		filename ='./models/plots/plot_'+title+'_'+str(iteration)+'.jpg'
-		plt.savefig(filename)
-	if show:
-		plt.show()
-	plt.close()
-
-def plot_simple(data, text, save = True, show = False):
-	fig2 = plt.figure(figsize=(10, 10))
-	plt.plot(data)
-	plt.ylabel(text)
-	plt.xlabel('Time')
-
-	if save:
-		filename ='./models/plots/plot_'+text+'.jpg'
+		filename ='./plots/plot_'+title+'_'+str(iteration)+'.jpg'
 		plt.savefig(filename)
 	if show:
 		plt.show()

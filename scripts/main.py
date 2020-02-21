@@ -9,7 +9,7 @@ import cv2
 from models import Models
 from intrinsic_motivation import IntrinsicMotivation
 
-from plots import plot_learning_progress, plot_log_goal_inv, plot_log_goal_fwd, plot_simple, plot_learning_comparisons
+from plots import plot_exploration, plot_learning_progress, plot_log_goal_inv, plot_log_goal_fwd, plot_simple, plot_learning_comparisons
 
 # from cv_bridge import CvBridge, CvBridgeError
 import random
@@ -56,7 +56,7 @@ class GoalBabbling():
 		signal.signal(signal.SIGINT, self.Exit_call)
 
 		print('Loading test dataset ', self.parameters.get('romi_dataset_pkl'))
-		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), step=self.parameters.get('romi_test_data_step'))
+		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), step=self.parameters.get('romi_test_size'))
 
 
 	def initialise(self, param):
@@ -94,15 +94,15 @@ class GoalBabbling():
 
 
 	def log_current_inv_mse(self, param):
-		img_codes = self.models.encoder.predict(self.test_images[0: param.get('romi_test_size')])
+		img_codes = self.models.encoder.predict(self.test_images)
 		motor_pred = self.models.inv_model.predict(img_codes)
-		mse = (np.linalg.norm(motor_pred-self.test_pos[0:param.get('romi_test_size')]) ** 2) / param.get('romi_test_size')
+		mse = (np.linalg.norm(motor_pred-self.test_pos) ** 2) / param.get('romi_test_size')
 		print ('Current mse inverse code model: ', mse)
 		self.models.logger_inv.store_log(mse)
 
 	def log_current_fwd_mse(self, param):
-		img_obs_code = self.models.encoder.predict(self.test_images[0:param.get('romi_test_size')])
-		img_pred_code = self.models.fwd_model.predict(self.test_pos[0:param.get('romi_test_size')])
+		img_obs_code = self.models.encoder.predict(self.test_images)
+		img_pred_code = self.models.fwd_model.predict(self.test_pos)
 		mse = (np.linalg.norm(img_pred_code-img_obs_code) ** 2) /  param.get('romi_test_size')
 		print ('Current mse fwd model: ', mse)
 		self.models.logger_fwd.store_log(mse)
@@ -165,20 +165,18 @@ class GoalBabbling():
 		
 			self.create_simulated_data(p, self.prev_pos, param)
 			self.prev_pos=p
-			'''
+
+			# plot the explored points and the position of the goals
 			if self.iteration % 50 == 0:
-				#test_codes= self.encoder.predict(self.test_images[0:self.goal_size*self.goal_size].reshape(self.goal_size*self.goal_size, self.image_size, self.image_size, self.channels))
-				if self.goal_selection_mode == 'db' or self.goal_selection_mode == 'random':
-					plot_cvh(self.convex_hull_inv, title=self.goal_selection_mode+'_'+str(self.exp_iteration)+'cvh_inv', iteration = self.iteration, dimensions=2, log_goal=self.test_pos[0:self.goal_size*self.goal_size], num_goals=self.goal_size*self.goal_size)
-				elif self.goal_selection_mode == 'kmeans':
-					goals_pos = self.inverse_code_model.predict(self.kmeans.cluster_centers_[0:self.goal_size*self.goal_size].reshape(self.goal_size*self.goal_size, self.code_size))
-					plot_cvh(self.convex_hull_inv, title=self.goal_selection_mode+'_'+str(self.exp_iteration)+'cvh_inv', iteration = self.iteration, dimensions=2, log_goal=goals_pos, num_goals=self.goal_size*self.goal_size)
-				elif self.goal_selection_mode == 'som':
-					goals_pos = self.inverse_code_model.predict(self.goal_som._weights.reshape(len(self.goal_som._weights)*len(self.goal_som._weights[0]), len(self.goal_som._weights[0][0]) ))
-					plot_cvh(self.convex_hull_inv, title=self.goal_selection_mode+'_'+str(self.exp_iteration)+'cvh_inv', iteration = self.iteration, dimensions=2, log_goal=goals_pos, num_goals=self.goal_size*self.goal_size)
-				#test_codes_ipca = self.fwd_ipca.fit_transform(test_codes)
-				#plot_cvh(self.convex_hull_fwd, title=self.goal_selection_mode+'_'+str(self.exp_iteration)+'cvh_fwd', iteration = self.iteration, dimensions=2, log_goal=test_codes_ipca, num_goals=self.goal_size*self.goal_size)
-			'''
+				if param.get('goal_selection_mode') == 'db' or param.get('goal_selection_mode') == 'random':
+					goals_pos = self.test_pos[0:(param.get('goal_size')*param.get('goal_size'))]
+				elif param.get('goal_selection_mode') == 'som':
+					goals_pos = self.models.inv_model.predict(self.models.goal_som._weights.reshape(len(self.models.goal_som._weights)*len(self.models.goal_som._weights[0]), len(self.models.goal_som._weights[0][0]) ))
+
+				plot_exploration(positions=self.pos,
+								 goals=goals_pos,
+								 iteration=self.exp_iteration,
+								 param=param)
 
 			# update competence of the current goal (it is supposed that at this moment the action is finished
 			if len(self.img)>0 and (not self.random_cmd_flag or param.get('goal_selection_mode') == 'random'):
@@ -187,7 +185,7 @@ class GoalBabbling():
 				prediction_code = self.models.fwd_model.predict(np.asarray(cmd).reshape((1,2)))
 
 				prediction_error = np.linalg.norm(np.asarray(self.goal_code[:])-np.asarray(prediction_code[:]))
-				self.intrinsic_motivation.update_competences(self.current_goal_x, self.current_goal_y, prediction_error)
+				self.intrinsic_motivation.update_errors(self.current_goal_x, self.current_goal_y, prediction_error)
 				#print 'Prediction error: ', prediction_error, ' learning progress: ', self.interest_model.get_learning_progress(self.current_goal_x, self.current_goal_y)
 		
 				#self.log_lp.append(np.asarray(deepcopy(self.intrinsic_motivation.learning_progress)))
