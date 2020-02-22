@@ -54,7 +54,7 @@ class Parameters:
             'im_decay_factor': 0.9,
             'im_initial_pe_buffer_size': 10, # initial size of the prediction error buffer
             'im_fixed_pe_buffer_size': True, # force a fixed PE buffer size or make it dependent on the overall PE reduction trend?
-            'im_random_goal_prob': 0.0, # probability of selecting a random goal instead of the best one
+            'im_random_goal_prob': 0.05, # probability of selecting a random goal instead of the best one
 
             'loss': 'mean_squared_error',
             'optimizer': 'adam',
