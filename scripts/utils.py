@@ -4,6 +4,7 @@ import pickle
 import cv2
 import numpy as np
 import tensorflow.compat.v1 as tf
+import time
 
 x_lims=[0.0,750.0]
 y_lims=[0.0,750.0]
@@ -82,12 +83,15 @@ def parse_data( file_name, pixels, reshape, channels=1):
 
 #### utility functions for reading visuo-motor data from the ROMI dataset
 # https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def load_data( dataset, image_size, test_size=100):
+def load_data( dataset, image_size, param):
 
 	images, commands, positions = parse_data(dataset, reshape=True, pixels = image_size)
 	# split train and test data
-	#indices = range(0, len(positions), step) # choose random samples instead!
-	test_indexes = np.random.choice(range(len(positions)), test_size)
+	# set always the same random seed, so that always the same test data are picked up (in case of multiple experiments in the same run)
+	np.random.seed(param.get('romi_seed_test_data'))
+	test_indexes = np.random.choice(range(len(positions)), param.get('test_size'))
+	#reset seet
+	np.random.seed(time.time())
 
 	# print ('test idx' + str(test_indexes))
 	train_indexes = np.ones(len(positions), np.bool)
