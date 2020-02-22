@@ -12,7 +12,7 @@ import sys
 import h5py
 
 from minisom import MiniSom
-import logger
+import model_logger
 import memory
 
 
@@ -53,8 +53,8 @@ class Models:
         self.memory_inv = memory.Memory(param = self.parameters)
 
         # initialise loggers
-        self.logger_fwd = logger.Logger(param = self.parameters, name='fwd')
-        self.logger_inv = logger.Logger(param = self.parameters, name='inv')
+        self.logger_fwd = model_logger.Logger(param = self.parameters, name='fwd')
+        self.logger_inv = model_logger.Logger(param = self.parameters, name='inv')
 
 
     def load_autoencoder(self, param, train_images=None, train_offline=True):

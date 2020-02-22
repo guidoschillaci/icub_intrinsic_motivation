@@ -4,8 +4,10 @@ import numpy as np
 import random
 import sys
 from sklearn.linear_model import LinearRegression
+from scipy.stats.stats import pearsonr
 import matplotlib.pyplot as plt
 import os
+import utils
 
 class IntrinsicMotivation():
 
@@ -21,6 +23,8 @@ class IntrinsicMotivation():
 		self.slopes_pe_dynamics = [] # for each goal, keeps track of the trends of the PE_dynamics (slope of the regression over the pe_buffer)
 
 		self.goal_id_history = [] # keep track of the goals that have been selected over time
+
+		self.movements_amplitude = []
 
 		# self.pe_derivatives = [] # derivative of the prediction errors for each goal
 		#self.competence_measure = param.get('im_competence_measure')
@@ -68,6 +72,7 @@ class IntrinsicMotivation():
 			sys.exit(1)
 		return goal_id
 
+
 	def update_error_dynamics(self, goal_id_x, goal_id_y, prediction_error):
 		print ('updating error dynamics')
 		if len(self.pe_max_buffer_size_history)==0:
@@ -107,15 +112,28 @@ class IntrinsicMotivation():
 	def get_best_goal_index(self):
 		return np.argmin(self.slopes_pe_dynamics[-1])
 
+	def log_last_movement(self, pos_a, pos_b):
+		self.movements_amplitude.append(utils.distance(pos_a,pos_b))
+
+	def get_linear_correlation_btw_amplitude_and_pe_dynamics(self):
+		# first make a vector storing the pe_dynamics of the current goals over time
+		self.slopes_of_goals = [[ self.slopes_pe_dynamics[elem][self.goal_id_history[elem]] ] for elem in self.goal_id_history]
+		self.pearson_corr = pearsonr(self.slopes_of_goals, self.movements_amplitude)
+		print ('Pearson correlation', self.pearson_corr)
+		self.plot_slopes_of_goals()
+		return self.pearson_corr
+
 
 	def save_im(self):
 		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_dynamics)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_goals'), self.slopes_of_goals)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_goal_id_history'), self.goal_id_history)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_pearson_corr'), self.pearson_corr)
 
 	def plot_slopes(self, save=True, show=True):
 		fig = plt.figure(figsize=(10, 10))
-		num_goals= self.param.get('goal_size')*self.param.get('goal_size')
+		num_goals = self.param.get('goal_size') * self.param.get('goal_size')
 		ax1 = plt.subplot(num_goals + 1, 1, 1)
 		plt.plot(self.goal_id_history)
 		plt.ylim(1, num_goals)
@@ -124,7 +142,7 @@ class IntrinsicMotivation():
 		ax1.set_yticks(np.arange(0, num_goals))
 		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
 
-		#data = np.transpose(log_lp)
+		# data = np.transpose(log_lp)
 		data = np.transpose(self.slopes_pe_dynamics)
 		for i in range(0, num_goals):
 			ax = plt.subplot(num_goals + 1, 1, i + 2)
@@ -132,7 +150,22 @@ class IntrinsicMotivation():
 			plt.ylabel('g{}'.format(i))
 
 		if save:
-			plt.savefig(self.param.get('results_directory')+'/plots/im_slopes_pe_dynamics.jpg')
+			plt.savefig(self.param.get('results_directory') + '/plots/im_slopes_pe_dynamics.jpg')
+		if show:
+			plt.show()
+		plt.close()
+
+	def plot_slopes_of_goals(self, save=True, show=True):
+		fig = plt.figure(figsize=(10, 10))
+		num_goals= self.param.get('goal_size')*self.param.get('goal_size')
+		ax1 = plt.subplot(num_goals + 1, 1, 1)
+		plt.plot(self.slopes_of_goals)
+		plt.ylabel('slope')
+		plt.xlabel('time')
+		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
+
+		if save:
+			plt.savefig(self.param.get('results_directory')+'/plots/im_slopes_of_goals.jpg')
 		if show:
 			plt.show()
 		plt.close()

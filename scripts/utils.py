@@ -40,6 +40,9 @@ class Position:
         self.z = 0
         self.speed = 0
 
+def distance (pos_a, pos_b):
+	return np.sqrt( (pos_a.x - pos_b.x)^2 + (pos_a.y - pos_b.y)^2 + (pos_a.z - pos_b.z)^2)
+
 
 def clear_tensorflow_graph():
 	print('Clearing TF session')

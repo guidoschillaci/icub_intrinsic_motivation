@@ -158,12 +158,15 @@ class GoalBabbling():
 			else:
 				self.random_cmd_flag = False
 
-			print ('predicted position ', motor_pred[0], 'p+noise ', motor_pred[0][0]+noise_x, ' ' , motor_pred[0][1]+noise_y, ' clamped ', p.x, ' ' , p.y, ' noise.x ', noise_x, ' n.y ', noise_y)
+			#print ('predicted position ', motor_pred[0], 'p+noise ', motor_pred[0][0]+noise_x, ' ' , motor_pred[0][1]+noise_y, ' clamped ', p.x, ' ' , p.y, ' noise.x ', noise_x, ' n.y ', noise_y)
 
 			p.z = int(-90)
 			p.speed = int(1400)
-		
+			# generate movement
 			self.create_simulated_data(p, self.prev_pos, param)
+			# store the amplitude of this movement
+			self.intrinsic_motivation.log_last_movement(p, self.prev_pos)
+			# update the variables
 			self.prev_pos=p
 
 			# plot the explored points and the position of the goals
@@ -254,6 +257,7 @@ class GoalBabbling():
 		self.models.save_logs(self.parameters)
 		self.intrinsic_motivation.save_im()
 		self.intrinsic_motivation.plot_slopes()
+		self.intrinsic_motivation.get_linear_correlation_btw_amplitude_and_pe_dynamics()
 		print ('Models saved')
 		
 	def clear_session(self):
