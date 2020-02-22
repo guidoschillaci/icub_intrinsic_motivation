@@ -150,13 +150,13 @@ class GoalBabbling():
 
 			# choose random motor commands from time to time
 			ran = random.random()
-			if ran < param.get('random_cmd_rate') or self.models.memory_fwd.is_memory_still_not_full() or param.get('goal_selection_mode') =='random':
+			if ran < param.get('random_cmd_rate') or param.get('goal_selection_mode') =='random': #or self.models.memory_fwd.is_memory_still_not_full()
 				print ('generating random motor command')
 				p.x = random.uniform(x_lims[0], x_lims[1])
 				p.y = random.uniform(y_lims[0], y_lims[1])
 				self.random_cmd_flag = True
 			else:
-				self.random_cmd_flag=False
+				self.random_cmd_flag = False
 
 			print ('predicted position ', motor_pred[0], 'p+noise ', motor_pred[0][0]+noise_x, ' ' , motor_pred[0][1]+noise_y, ' clamped ', p.x, ' ' , p.y, ' noise.x ', noise_x, ' n.y ', noise_y)
 
@@ -173,23 +173,18 @@ class GoalBabbling():
 				elif param.get('goal_selection_mode') == 'som':
 					goals_pos = self.models.inv_model.predict(self.models.goal_som._weights.reshape(len(self.models.goal_som._weights)*len(self.models.goal_som._weights[0]), len(self.models.goal_som._weights[0][0]) ))
 
-				plot_exploration(positions=self.pos,
-								 goals=goals_pos,
-								 iteration=self.exp_iteration,
-								 param=param)
+				#plot_exploration(positions=self.pos,goals=goals_pos,iteration=self.exp_iteration,param=param)
 
-			# update competence of the current goal (it is supposed that at this moment the action is finished
-			if len(self.img)>0 and (not self.random_cmd_flag or param.get('goal_selection_mode') == 'random'):
+			# update error dynamics of the current goal (it is supposed that at this moment the action is finished
+			if len(self.img)>0 and not (param.get('goal_selection_mode') == 'random') and not (self.random_cmd_flag and len(self.intrinsic_motivation.slopes_pe_dynamics)>0) :
 
 				cmd = [p.x/float(x_lims[1]), p.y/float(y_lims[1])]
 				prediction_code = self.models.fwd_model.predict(np.asarray(cmd).reshape((1,2)))
 
 				prediction_error = np.linalg.norm(np.asarray(self.goal_code[:])-np.asarray(prediction_code[:]))
 				self.intrinsic_motivation.update_error_dynamics(self.current_goal_x, self.current_goal_y, prediction_error)
-				#print 'Prediction error: ', prediction_error, ' learning progress: ', self.interest_model.get_learning_progress(self.current_goal_x, self.current_goal_y)
-		
-				#self.log_lp.append(np.asarray(deepcopy(self.intrinsic_motivation.learning_progress)))
-				#self.log_goal_id.append(self.current_goal_idx)
+				
+
 
 			# first update the memory, then update the models
 			observed_pos = self.pos[-1]

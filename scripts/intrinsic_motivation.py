@@ -5,6 +5,7 @@ import random
 import sys
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
+import os
 
 class IntrinsicMotivation():
 
@@ -13,8 +14,9 @@ class IntrinsicMotivation():
 		#self.learning_progress = 0.0 # interest factor for each goal
 
 		self.pe_buffer = [] # buffer of prediction errors for each goal. Its size is dynamic!
+		for i in range(self.param.get('goal_size')*self.param.get('goal_size')):
+			self.pe_buffer.append([])
 		self.pe_max_buffer_size_history = [] # keep track of the buffer size over time (same size for all goals)
-		self.pe_max_buffer_size_history.append(param.get('im_initial_pe_buffer_size'))
 
 		self.slopes_pe_dynamics = [] # for each goal, keeps track of the trends of the PE_dynamics (slope of the regression over the pe_buffer)
 
@@ -37,7 +39,7 @@ class IntrinsicMotivation():
 	def select_goal(self):
 		ran = random.random()
 		goal_idx = 0
-		if ran < self.param.get('im_random_goal_prob'):
+		if ran < self.param.get('im_random_goal_prob') or len(self.slopes_pe_dynamics)==0:
 			# select random goal
 			goal_idx = random.randint(0, self.param.get('goal_size') * self.param.get('goal_size') - 1)
 			print ('Interest Model: Selected random goal. Id: ', goal_idx)
@@ -67,8 +69,12 @@ class IntrinsicMotivation():
 		return goal_id
 
 	def update_error_dynamics(self, goal_id_x, goal_id_y, prediction_error):
-		# decay all
-		#self.learning_progress = self.decay_factor * self.learning_progress
+		print ('updating error dynamics')
+		if len(self.pe_max_buffer_size_history)==0:
+			self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
+		else:
+			self.update_max_pe_buffer_size()
+
 		goal_id = self.get_goal_id(goal_id_x, goal_id_y)
 		# keep track of the goal that have been selected
 		self.goal_id_history.append(goal_id)
@@ -80,31 +86,32 @@ class IntrinsicMotivation():
 		# - check that all the buffers are within the max buffer size
 		# - compute regression on prediction error and save the slope (trend of error dynamics)
 		current_slopes_err_dynamics = []
-		for i in range(len(self.param.get('goal_size')*self.param.get('goal_size'))):
+		for i in range(self.param.get('goal_size')*self.param.get('goal_size')):
 			while len(self.pe_buffer[i]) > self.pe_max_buffer_size_history[-1]:
 				self.pe_buffer[i].pop(0) #remove first element
 			if len(self.pe_buffer[i]) < 2 : # not enough prediction error to calculate the regression
 				current_slopes_err_dynamics.append(0)
 			else:
 				# get the slopes of the prediction error dynamics
-				regr_x = range(len(self.pe_buffer[i]))
+				regr_x = np.asarray(range(len(self.pe_buffer[i]))).reshape((-1,1))
 				print ('calculating regression on goal ', str(i))
-				model = LinearRegression().fit(regr_x, self.pe_buffer[i])
+				model = LinearRegression().fit(regr_x, np.asarray(self.pe_buffer[i]))
 				current_slopes_err_dynamics.append(model.coef_[0]) # add the slope of the regression
 
 		self.slopes_pe_dynamics.append(current_slopes_err_dynamics)
-		print ('slopes', self.slopes_pe_dynamics)
+		print ('slopes', self.slopes_pe_dynamics[-1])
+		
 
 
 	# get the index of the goal associated with the lowest slope in the prediction error dynamics
 	def get_best_goal_index(self):
-		return np.argmin(self.slopes_pe_dynamics)
+		return np.argmin(self.slopes_pe_dynamics[-1])
 
 
 	def save_im(self):
-		np.save(os.path.join(self.parameters.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_dynamics)
-		np.save(os.path.join(self.parameters.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)
-		np.save(os.path.join(self.parameters.get('results_directory'), 'im_goal_id_history'), self.goal_id_history)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_dynamics)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_goal_id_history'), self.goal_id_history)
 
 	def plot_slopes(self, save=True, show=True):
 		fig = plt.figure(figsize=(10, 10))
@@ -125,7 +132,7 @@ class IntrinsicMotivation():
 			plt.ylabel('g{}'.format(i))
 
 		if save:
-			plt.savefig(self.parameters.get('results_directory')+'/plots/im_slopes_pe_dynamics.jpg')
+			plt.savefig(self.param.get('results_directory')+'/plots/im_slopes_pe_dynamics.jpg')
 		if show:
 			plt.show()
 		plt.close()
