@@ -41,7 +41,7 @@ class Position:
         self.speed = 0
 
 def distance (pos_a, pos_b):
-	return np.sqrt( (pos_a.x - pos_b.x)^2 + (pos_a.y - pos_b.y)^2 + (pos_a.z - pos_b.z)^2)
+	return np.sqrt( np.power(pos_a.x - pos_b.x, 2) + np.power(pos_a.y - pos_b.y, 2) + np.power(pos_a.z - pos_b.z,2) )
 
 
 def clear_tensorflow_graph():
@@ -86,15 +86,15 @@ def parse_data( file_name, pixels, reshape, channels=1):
 
 #### utility functions for reading visuo-motor data from the ROMI dataset
 # https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def load_data( dataset, image_size, param):
+def load_data(param):
 
-	images, commands, positions = parse_data(dataset, reshape=True, pixels = image_size)
+	images, commands, positions = parse_data(param.get('romi_dataset_pkl'), reshape=True, pixels = param.get('image_size'))
 	# split train and test data
 	# set always the same random seed, so that always the same test data are picked up (in case of multiple experiments in the same run)
 	np.random.seed(param.get('romi_seed_test_data'))
-	test_indexes = np.random.choice(range(len(positions)), param.get('test_size'))
+	test_indexes = np.random.choice(range(len(positions)), param.get('romi_test_size'))
 	#reset seet
-	np.random.seed(time.time())
+	np.random.seed(int(time.time()))
 
 	# print ('test idx' + str(test_indexes))
 	train_indexes = np.ones(len(positions), np.bool)

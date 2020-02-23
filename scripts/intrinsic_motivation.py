@@ -46,7 +46,7 @@ class IntrinsicMotivation():
 		if ran < self.param.get('im_random_goal_prob') or len(self.slopes_pe_dynamics)==0:
 			# select random goal
 			goal_idx = random.randint(0, self.param.get('goal_size') * self.param.get('goal_size') - 1)
-			print ('Interest Model: Selected random goal. Id: ', goal_idx)
+			print ('Intrinsic motivation: Selected random goal. Id: ', goal_idx)
 		else:
 		#if ran < 0.85 and np.sum(self.learning_progress)>0: # 70% of the times
 			# select best goal
@@ -117,8 +117,16 @@ class IntrinsicMotivation():
 
 	def get_linear_correlation_btw_amplitude_and_pe_dynamics(self):
 		# first make a vector storing the pe_dynamics of the current goals over time
-		self.slopes_of_goals = [[ self.slopes_pe_dynamics[elem][self.goal_id_history[elem]] ] for elem in self.goal_id_history]
-		self.pearson_corr = pearsonr(self.slopes_of_goals, self.movements_amplitude)
+		#self.slopes_of_goals = np.asarray([[ self.slopes_pe_dynamics[elem][self.goal_id_history[elem]] ] for elem in self.goal_id_history]).flatten()
+		self.slopes_of_goals = []
+		for i in range(len(self.goal_id_history)):
+		#	print ('i ', i)
+		#	print ('self.goal_id_history[i] ',self.goal_id_history[i], ' shape ', np.asarray(self.goal_id_history).shape)
+		#	print ('self.slopes_pe_dynamics[self.goal_id_history[i]] ', self.slopes_pe_dynamics[self.goal_id_history[i]], ' shpae ' , np.asarray(self.slopes_pe_dynamics[self.goal_id_history[i]]).shape)
+			self.slopes_of_goals.append(self.slopes_pe_dynamics[i][self.goal_id_history[i]] )
+
+		#print ('corre shape np.asarray(self.slopes_of_goals)', np.asarray(self.slopes_of_goals).shape, ' mov ',np.asarray(self.movements_amplitude).shape)
+		self.pearson_corr = pearsonr(np.asarray(self.slopes_of_goals), np.asarray(self.movements_amplitude))
 		print ('Pearson correlation', self.pearson_corr)
 		self.plot_slopes_of_goals()
 		return self.pearson_corr
@@ -144,6 +152,7 @@ class IntrinsicMotivation():
 
 		# data = np.transpose(log_lp)
 		data = np.transpose(self.slopes_pe_dynamics)
+		#data = self.slopes_pe_dynamics
 		for i in range(0, num_goals):
 			ax = plt.subplot(num_goals + 1, 1, i + 2)
 			plt.plot(data[i])
@@ -158,12 +167,18 @@ class IntrinsicMotivation():
 	def plot_slopes_of_goals(self, save=True, show=True):
 		fig = plt.figure(figsize=(10, 10))
 		num_goals= self.param.get('goal_size')*self.param.get('goal_size')
-		ax1 = plt.subplot(num_goals + 1, 1, 1)
+		ax1 = plt.subplot(2, 1, 1)
 		plt.plot(self.slopes_of_goals)
-		plt.ylabel('slope')
+		plt.ylabel('slope of PE_dynamics for selected goal')
 		plt.xlabel('time')
 		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
 
+		#print ('movement amplitude ', self.movements_amplitude)
+		ax1 = plt.subplot(2, 1, 2)
+		plt.plot(self.movements_amplitude)
+		plt.ylabel('Movement amplitude')
+		plt.xlabel('time')
+		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
 		if save:
 			plt.savefig(self.param.get('results_directory')+'/plots/im_slopes_of_goals.jpg')
 		if show:

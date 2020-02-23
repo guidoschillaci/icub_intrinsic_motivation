@@ -26,7 +26,7 @@ import threading
 import random
 from cam_sim import Cam_sim
 from parameters import Parameters
-
+from copy import deepcopy
 #from doepy import build, read_write # pip install doepy - it may require also diversipy
 
 import tensorflow.compat.v1 as tf
@@ -56,7 +56,7 @@ class GoalBabbling():
 		signal.signal(signal.SIGINT, self.Exit_call)
 
 		print('Loading test dataset ', self.parameters.get('romi_dataset_pkl'))
-		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters.get('romi_dataset_pkl'), self.parameters.get('image_size'), test_size=self.parameters.get('romi_test_size'))
+		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters)
 
 
 	def initialise(self, param):
@@ -166,8 +166,14 @@ class GoalBabbling():
 			self.create_simulated_data(p, self.prev_pos, param)
 			# store the amplitude of this movement
 			self.intrinsic_motivation.log_last_movement(p, self.prev_pos)
+			print ('current_p', p.x, ' ' , p.y)
+			print ('prev_p', self.prev_pos.x, ' ', self.prev_pos.y)	
 			# update the variables
-			self.prev_pos=p
+			self.prev_pos.x=p.x
+			self.prev_pos.y=p.y
+			self.prev_pos.z=p.z
+			self.prev_pos.speed=p.speed
+
 
 			# plot the explored points and the position of the goals
 			if self.iteration % 50 == 0:
@@ -207,8 +213,8 @@ class GoalBabbling():
 				obs_and_mem_pos = np.vstack((np.asarray(observed_pos_batch), np.asarray(self.models.memory_fwd.input_variables)))
 				obs_and_mem_img_codes = np.vstack((np.asarray(observed_codes_batch), np.asarray(self.models.memory_fwd.output_variables)))
 
-				self.models.train_forward_code_model_on_batch(self.models.fwd_model, obs_and_mem_pos, obs_and_mem_img_codes, param)
-				self.models.train_inverse_code_model_on_batch(self.models.inv_model, obs_and_mem_img_codes, obs_and_mem_pos, param)
+				self.models.train_forward_code_model_on_batch( obs_and_mem_pos, obs_and_mem_img_codes, param)
+				self.models.train_inverse_code_model_on_batch( obs_and_mem_img_codes, obs_and_mem_pos, param)
 
 				#train_autoencoder_on_batch(self.autoencoder, self.encoder, self.decoder, np.asarray(self.img[-32:]).reshape(32, self.image_size, self.image_size, self.channels), batch_size=self.batch_size, cae_epochs=5)
 
@@ -238,7 +244,9 @@ class GoalBabbling():
 		#print ('image size ', str(param.get('image_size')))
 		rounded  = self.cam_sim.round2mul(tr,5) # only images every 5mm
 		for i in range(len(tr)):
-			self.pos.append([float(rounded[i][0]) / x_lims[1], float(rounded[i][1]) / y_lims[1]] )
+			pp = [float(rounded[i][0]) / x_lims[1], float(rounded[i][1]) / y_lims[1]] 
+			#print ('pp ',pp)
+			self.pos.append(pp)
 			self.cmd.append([float(int(cmd.x)) / x_lims[1], float(int(cmd.y)) / y_lims[1]] )
 			cv2_img = cv2.imread(trn[i])#,1 )
 			cv2.imshow('image',cv2_img)
@@ -255,9 +263,10 @@ class GoalBabbling():
 	def save_models(self, param):
 		self.models.save_models(param)
 		self.models.save_logs(self.parameters)
+		
+		self.intrinsic_motivation.get_linear_correlation_btw_amplitude_and_pe_dynamics()
 		self.intrinsic_motivation.save_im()
 		self.intrinsic_motivation.plot_slopes()
-		self.intrinsic_motivation.get_linear_correlation_btw_amplitude_and_pe_dynamics()
 		print ('Models saved')
 		
 	def clear_session(self):

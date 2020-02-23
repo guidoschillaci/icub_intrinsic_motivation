@@ -49,7 +49,7 @@ class Parameters:
 
 
             'random_cmd_flag': False,
-            'random_cmd_rate': 0.3,
+            'random_cmd_rate': 0.1,
 
             'im_competence_measure': 'euclidean',
             'im_decay_factor': 0.9,
