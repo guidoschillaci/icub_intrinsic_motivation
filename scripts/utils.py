@@ -7,9 +7,74 @@ import tensorflow.compat.v1 as tf
 import time
 
 x_lims=[0.0,750.0]
+x_mean = (x_lims[1] - x_lims[0]) /2.0
 y_lims=[0.0,750.0]
+y_mean = (y_lims[1]-y_lims[0]) /2.0
 z_lims=[-10.0,-90.0]
+z_mean = (z_lims[1]-z_lims[0]) /2.0
 speed_lim = 3400.0
+
+
+
+def normalise_x(x, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (x - x_mean) / x_lims[1]
+	else:
+		return x / x_lims[1]
+
+def normalise_y(y, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (y - y_mean) / y_lims[1]
+	else:
+		return y / y_lims[1]
+
+def normalise_z(z, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (z - z_mean) / z_lims[1]
+	else:
+		return z / z_lims[1]
+
+def normalise(p, param):
+	p_n = Position()
+	p_n.x = normalise_x(p.x, param)
+	p_n.y = normalise_y(p.y, param)
+	p_n.z = normalise_z(p.z, param)
+	p_n.speed = p.speed
+	return p_n
+
+def unnormalise_x(x, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (x * x_lims[1]) + x_mean
+	else:
+		return x * x_lims[1]
+
+def unnormalise_y(y, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (y * y_lims[1]) + y_mean
+	else:
+		return y * y_lims[1]
+
+def unnormalise_z(z, param):
+	if param.get('normalise_with_zero_mean'):
+		return  (z * z_lims[1]) + z_mean
+	else:
+		return z * z_lims[1]
+
+def unnormalise(p, param):
+	p_n = Position()
+	p_n.x = unnormalise_x(p.x, param)
+	p_n.y = unnormalise_y(p.y, param)
+	p_n.z = unnormalise_z(p.z, param)
+	p_n.speed = p.speed
+	return p_n
+
+def clamp(p):
+	p_n=Position()
+	p_n.x = clamp_x(p.x)
+	p_n.y = clamp_y(p.y)
+	p_n.z = clamp_z(p.z)
+	p_n.speed = p.speed
+	return speed
 
 def clamp_x(x):
 	if x <= x_lims[0]:
@@ -53,7 +118,11 @@ def clear_tensorflow_graph():
 
 #### utility functions for reading visuo-motor data from the ROMI dataset
 # https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def parse_data( file_name, pixels, reshape, channels=1):
+def parse_data( param):
+	reshape = param.get('load_data_reshape')
+	file_name= param.get('romi_dataset_pkl')
+	pixels = param.get('image_size')
+	channels = param.get('image_channels')
 	images = []
 	positions = []
 	commands = []
@@ -67,12 +136,26 @@ def parse_data( file_name, pixels, reshape, channels=1):
 				image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 			image = cv2.resize(image, (pixels, pixels))
 
-			images.append(np.asarray(image))
+			images.append(np.asarray(image).astype('float32') / 255)
 
 			cmd = memory['command']
-			commands.append([float(cmd.x) / x_lims[1], float(cmd.y) / y_lims[1]])
+			commands.append([normalise_x(float(cmd.x), param), normalise_y(float(cmd.y), param)] )
+			#cmd_p = Position()
+			#cmd_p.x = float(cmd.x)
+			#cmd_p.y = float(cmd.y)
+			#cmd_p.z = -90
+			#cmd_p.speed = 1400
+
+			#commands.append(normalise(cmd_p))
 			pos = memory['position']
-			positions.append([float(pos.x) / x_lims[1], float(pos.y) / y_lims[1]])
+			positions.append([normalise_x(float(pos.x), param), normalise_y(float(pos.y), param)] )
+			#pos_p = Position()
+			#pos_p.x = float(pos.x)
+			#pos_p.y = float(pos.y)
+			#pos_p.z = -90
+			#pos_p.speed = 1400
+
+			#positions.append(normalise(pos_p))
 
 			count += 1
 
@@ -82,18 +165,18 @@ def parse_data( file_name, pixels, reshape, channels=1):
 	if reshape:
 		images = images.reshape((len(images), pixels, pixels, channels))
 	#print ('images shape ', str(images.shape))
-	return images.astype('float32') / 255, commands, positions
+	return images, commands, positions
 
 #### utility functions for reading visuo-motor data from the ROMI dataset
 # https://zenodo.org/record/3552827#.Xk5f6hNKjjC
 def load_data(param):
 
-	images, commands, positions = parse_data(param.get('romi_dataset_pkl'), reshape=True, pixels = param.get('image_size'))
+	images, commands, positions = parse_data(param)
 	# split train and test data
 	# set always the same random seed, so that always the same test data are picked up (in case of multiple experiments in the same run)
 	np.random.seed(param.get('romi_seed_test_data'))
 	test_indexes = np.random.choice(range(len(positions)), param.get('romi_test_size'))
-	#reset seet
+	#reset seed
 	np.random.seed(int(time.time()))
 
 	# print ('test idx' + str(test_indexes))

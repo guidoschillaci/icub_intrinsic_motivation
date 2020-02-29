@@ -19,6 +19,12 @@ class Memory:
         self.prediction_errors = [] # for each sample in the memory, store the prediction errors calculated at the last fits at times t and t-1
         self.learning_progress = [] # derivative of the prediction errors (for the moment, just simply pe(t) - pe(t-1)
 
+    def is_memory_empty(self):
+	if len(self.input_variables) == 0:
+            return True
+	else:
+            return False
+
     def is_memory_still_not_full(self):
         if len(self.input_variables) < self.parameters.get('memory_size'):
             return True
@@ -32,11 +38,14 @@ class Memory:
         if self.parameters.get('memory_size') != 0:
             # if the size of the stored samples has not reached the full size of the memory, then just append the samples
             if len(self.input_variables) < self.parameters.get('memory_size'):
-                self.input_variables.append(input)
-                self.output_variables.append(output)
-                self.prediction_errors.append([])
-                self.learning_progress.append(np.nan)
+            	ran = random.random()
+            	if ran < self.parameters.get('memory_update_probability'):
+	            self.input_variables.append(input)
+                    self.output_variables.append(output)
+		    self.prediction_errors.append([])
+                    self.learning_progress.append(np.nan)
             else:
+		#print ('self.parameters.getmemory_update_strategy) ' , self.parameters.get('memory_update_strategy'))
                 if self.parameters.get('memory_update_strategy') == MemUpdateStrategy.RANDOM.value:
                     # iterate the memory and decide whether to assign the current sample to an element or not, with probability p
                     #for i in range(len(self.input_variables)):

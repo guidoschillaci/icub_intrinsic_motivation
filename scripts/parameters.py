@@ -22,12 +22,15 @@ class Parameters:
             'code_size': 32, # dimensions of the latent space of convoltioanl autoencoder
             'goal_size': 3, # SOMs size. There will be goal_size*goal_size  goal. TODO: improve this
 
+	   
+            'normalise_with_zero_mean': False, 
+	    'load_data_reshape': True, 
             'batch_size':16, # for the fwd/inv models update
             'epochs': 1, # online fwd/inv models
             'goal_selection_mode':'som',
             'exp_iteration': 0,
 
-            'max_iterations':5000,
+            'max_iterations':500,
 
             'cae_filename': 'autoencoder.h5',
             'encoder_filename': 'encoder.h5',
@@ -47,9 +50,10 @@ class Parameters:
             'inv_filename': 'inverse_code_model.h5',
             'som_filename': 'goal_som.h5',
 
+            'plot_exploration_iter': 50,
 
             'random_cmd_flag': False,
-            'random_cmd_rate': 0.1,
+            'random_cmd_rate': 0.2,
 
             'im_competence_measure': 'euclidean',
             'im_decay_factor': 0.9,
@@ -59,9 +63,9 @@ class Parameters:
 
             'loss': 'mean_squared_error',
             'optimizer': 'adam',
-            'memory_size': 1000,
-            'memory_update_probability': 0.0001,
-            'memory_update_strategy': MemUpdateStrategy.RANDOM,  # possible choices:  random, learning_progress
+            'memory_size': 500,
+            'memory_update_probability': 0.05,
+            'memory_update_strategy': MemUpdateStrategy.RANDOM.value,  # possible choices:  random, learning_progress
             #'batch_size': 32,
             'batchs_to_update_online': 3,
             'mse_test_dataset_fraction' : 20,  #   how many samples to use in the MSE calculations? dataset_size / this.

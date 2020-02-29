@@ -27,17 +27,18 @@ def imscatter(x, y, ax, imageData, zoom, imageSize):
 	ax.autoscale()
 
 def plot_exploration(positions, goals, iteration, param, save = True, show = False):
+	print ('position shape ', np.asarray(positions).shape)
 	title = param.get('goal_selection_mode')+'_'+str(iteration)
 	fig2 = plt.figure(figsize=(10, 10))
 	#print (log_goal)
 	if param.get('romi_input_dim') ==2:
-		plt.scatter(positions[:,0],positions[:,1], s=2, color='g')
+		plt.scatter(np.transpose(positions)[0],np.transpose(positions)[1], s=2, color='g')
 		plt.plot( np.asarray(goals[:,0]).astype('float32'), np.asarray(goals[:,1]).astype('float32'), 'ro')
 
 		plt.xlabel('Pos x')
 		plt.ylabel('Pos y')
-		plt.xlim(-0.2,1.2)
-		plt.ylim(-0.2,1.2)
+		plt.xlim(-1.2,1.2)
+		plt.ylim(-1.2,1.2)
 	elif param.get('romi_input_dim')==4:
 		plt.subplot(1,2,1)
 		plt.scatter(positions[:,0],positions[:,1], s=2, color='g')
@@ -55,7 +56,7 @@ def plot_exploration(positions, goals, iteration, param, save = True, show = Fal
 		plt.ylabel('Dim 3')
 
 	if save:
-		filename ='./plots/plot_'+title+'_'+str(iteration)+'.jpg'
+		filename =param.get('results_directory')+ 'plots/plot_'+title+'_'+str(iteration)+'.jpg'
 		plt.savefig(filename)
 	if show:
 		plt.show()
