@@ -117,7 +117,7 @@ class GoalBabbling():
 
 			#print ('Mode ', self.goal_selection_mode, ' hist_size ', str(self.history_size), ' prob ', str(self.history_buffer_update_prob), ' iteration : ', self.iteration)
 			print ('Iteration ', self.iteration)
-			self.iteration = self.iteration+1
+			
 
 			# select a goal using the intrinsic motivation strategy
 			self.current_goal_idx, self.current_goal_x, self.current_goal_y = self.intrinsic_motivation.select_goal()
@@ -187,8 +187,12 @@ class GoalBabbling():
 
 				plot_exploration(positions=self.pos,goals=goals_pos,iteration=self.iteration,param=param)
 
+			if self.iteration % param.get('im_pe_buffer_size_update_frequency') == 0:
+				self.intrinsic_motivation.update_mse_dynamics(self.models.logger_fwd.get_last_mse())
+
+
 			# update error dynamics of the current goal (it is supposed that at this moment the action is finished
-			if len(self.img)>0 and not (param.get('goal_selection_mode') == 'random') and not (self.random_cmd_flag and len(self.intrinsic_motivation.slopes_pe_dynamics)>0) :
+			if len(self.img)>0 and not (param.get('goal_selection_mode') == 'random') and not (self.random_cmd_flag and len(self.intrinsic_motivation.slopes_pe_buffer)>0) :
 
 				#cmd = normalise(p) # [p.x/float(x_lims[1]), p.y/float(y_lims[1])]
 				cmd = [ normalise_x(p.x, param), normalise_y(p.y, param)]
@@ -222,7 +226,8 @@ class GoalBabbling():
 
 				#train_autoencoder_on_batch(self.autoencoder, self.encoder, self.decoder, np.asarray(self.img[-32:]).reshape(32, self.image_size, self.image_size, self.channels), batch_size=self.batch_size, cae_epochs=5)
 			if not self.random_cmd_flag:
-				self.prev_goal_idx = self.current_goal_idx
+				self.prev_goal_idx = self.current_goal_idx	
+			self.iteration = self.iteration+1
 		print ('Saving models')
 		self.save_models(param)
 
@@ -289,6 +294,7 @@ class GoalBabbling():
 			tf.compat.v1.reset_default_graph()
 
 	def Exit_call(self, signal, frame):
+		print ('Terminating...')
 		self.save_models(self.parameters)
 		self.goto_starting_pos()
 		sys.exit(1)

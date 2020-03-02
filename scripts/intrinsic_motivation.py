@@ -13,26 +13,32 @@ class IntrinsicMotivation():
 
 	def __init__(self, param):
 		self.param = param
-		#self.learning_progress = 0.0 # interest factor for each goal
 
-		self.pe_buffer = [] # buffer of prediction errors for each goal. Its size is dynamic!
-		for i in range(self.param.get('goal_size')*self.param.get('goal_size')):
-			self.pe_buffer.append([])
-		self.pe_max_buffer_size_history = [] # keep track of the buffer size over time (same size for all goals)
-
-		self.slopes_pe_dynamics = [] # for each goal, keeps track of the trends of the PE_dynamics (slope of the regression over the pe_buffer)
-
-		self.goal_id_history = [] # keep track of the goals that have been selected over time
-
-		self.movements_amplitude = []
-
-		# self.pe_derivatives = [] # derivative of the prediction errors for each goal
-		#self.competence_measure = param.get('im_competence_measure')
-		#self.decay_factor = param.get('im_decay_factor')
+		# keep track of the goals that have been selected over time
+		self.goal_id_history = [] 
 
 		if self.param.get('goal_size') <=0:
 			print ("Error: goal_size <=0")
 			sys.exit(1)
+
+		# For each goal, store the experienced prediction error into a buffer. The buffer size can or cannot be dynamic (param.im_fixed_pe_buffer_size)
+		self.pe_buffer = []
+		for i in range(self.param.get('goal_size')*self.param.get('goal_size')):
+			self.pe_buffer.append([])
+		# for each goal, keep track of the trend of the PE_dynamics (slope of the regression over the pe_buffer)
+		self.slopes_pe_buffer = [] 
+
+		# keep track of the buffer size over time (all goals' buffers have the same size)
+		self.pe_max_buffer_size_history = [] 
+
+		# buffer of MSE fwd model. Its slope determines whether to increase or decrease the size of each pe_buffer
+		self.mse_buffer = [] 
+		# keep track of the trend of the MSE (slope of the regression over the mse_buffer, which is calculated on the test dataset - make it on the SOM?)
+		self.slopes_mse_buffer = [] 
+
+		# keep track of the displacement of the last movement 
+		self.movements_amplitude = []
+
 
 		#self.learning_progress= np.resize(self.learning_progress, (self.param.get('goal_size')*self.param.get('goal_size') ,))
 		#for i in range (0, self.param.get('goal_size')*self.param.get('goal_size')):
@@ -43,7 +49,7 @@ class IntrinsicMotivation():
 	def select_goal(self):
 		ran = random.random()
 		goal_idx = 0
-		if ran < self.param.get('im_random_goal_prob') or len(self.slopes_pe_dynamics)==0:
+		if ran < self.param.get('im_random_goal_prob') or len(self.slopes_pe_buffer)==0:
 			# select random goal
 			goal_idx = random.randint(0, self.param.get('goal_size') * self.param.get('goal_size') - 1)
 			print ('Intrinsic motivation: Selected random goal. Id: ', goal_idx)
@@ -58,13 +64,8 @@ class IntrinsicMotivation():
 		print ('Goal_SOM coords: ', goal_idx, ' x: ', goal_x, ' y: ', goal_y)
 		return goal_idx, goal_x, goal_y
 
-	def update_max_pe_buffer_size(self):
-		if self.param.get('im_fixed_pe_buffer_size'):
-			self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
-		else:
-			new_buffer_size = 0.0 # TODO: make it dependent on the overall PE reduction trend
-			self.pe_max_buffer_size_history.append(new_buffer_size)
-
+	#def update_max_pe_buffer_size(self):
+		
 	def get_goal_id(self, id_x, id_y):
 		goal_id = int(id_x * self.param.get('goal_size') + id_y)
 		if (goal_id <0 or goal_id>(self.param.get('goal_size')*self.param.get('goal_size'))):
@@ -72,18 +73,50 @@ class IntrinsicMotivation():
 			sys.exit(1)
 		return goal_id
 
-
-	def update_error_dynamics(self, goal_id_x, goal_id_y, prediction_error, _append=True):
-		print ('updating error dynamics')
+	def update_pe_buffer_size(self):
 		if len(self.pe_max_buffer_size_history)==0:
 			self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
 		else:
-			self.update_max_pe_buffer_size()
+			if self.param.get('im_fixed_pe_buffer_size'):
+				self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
+			else:
+				new_buffer_size = self.slopes_mse_buffer[-1]
+				if self.slopes_mse_buffer[-1] > 0:
+					if new_buffer_size < self.param.get('im_max_pe_buffer_size'):
+						new_buffer_size = new_buffer_size + 1 # or decrease?
+				else:
+					if new_buffer_size > self.param.get('im_min_pe_buffer_size'):
+						new_buffer_size = new_buffer_size - 1 # or increase?
+				self.pe_max_buffer_size_history.append(new_buffer_size)
 
+	# update the dynamics of the overall mean squared error (forward model) calculated on the test dataset
+	def update_mse_dynamics(self, mse, _append=True):
+	
+		self.mse_buffer.append(mse)
+
+		if _append:
+			if len(self.mse_buffer) < 2 : # not enough prediction error to calculate the regression
+				self.slopes_mse_buffer.append(0)
+			else:
+				while len(self.mse_buffer) > self.param.get('im_mse_buffer_size'):
+					self.mse_buffer.pop(0) #remove first element
+			
+				# get the slopes of the prediction error dynamics
+				regr_x = np.asarray(range(len(self.mse_buffer))).reshape((-1,1))
+				print ('calculating regression on mse')
+				model = LinearRegression().fit(regr_x, np.asarray(self.mse_buffer))
+				self.slopes_mse_buffer.append(model.coef_[0]) # add the slope of the regression
+			self.update_pe_buffer_size()
+
+	# update the error dynamics for each gaol
+	def update_error_dynamics(self, goal_id_x, goal_id_y, prediction_error, _append=True):
+
+		if len(self.pe_max_buffer_size_history)==0:
+			print ('Error in im.update_error_dynamics(). You need to call before im.update_pe_buffer_size()!')
+			sys.exit(1)
+		print ('updating error dynamics')
 		goal_id = self.get_goal_id(goal_id_x, goal_id_y)
-		# keep track of the goal that have been selected
-		self.goal_id_history.append(goal_id)
-
+		
 		# append the current predction error to the current goal
 		self.pe_buffer[goal_id].append(prediction_error)
 
@@ -92,7 +125,7 @@ class IntrinsicMotivation():
 		# - compute regression on prediction error and save the slope (trend of error dynamics)
 		current_slopes_err_dynamics = []
 		for i in range(self.param.get('goal_size')*self.param.get('goal_size')):
-			while len(self.pe_buffer[i]) > self.pe_max_buffer_size_history[-1]:
+			while len(self.pe_buffer[i]) > self.pe_max_buffer_size_history[-1] and len(self.pe_buffer[i])>0:
 				self.pe_buffer[i].pop(0) #remove first element
 			if len(self.pe_buffer[i]) < 2 : # not enough prediction error to calculate the regression
 				current_slopes_err_dynamics.append(0)
@@ -104,28 +137,30 @@ class IntrinsicMotivation():
 				current_slopes_err_dynamics.append(model.coef_[0]) # add the slope of the regression
 
 		if _append:
-			self.slopes_pe_dynamics.append(current_slopes_err_dynamics)
-			print ('slopes', self.slopes_pe_dynamics[-1])
+			# keep track of the goal that have been selected
+			self.goal_id_history.append(goal_id)
+			self.slopes_pe_buffer.append(current_slopes_err_dynamics)
+			print ('slopes', self.slopes_pe_buffer[-1])
 		
 
 
 	# get the index of the goal associated with the lowest slope in the prediction error dynamics
 	def get_best_goal_index(self):
-		return np.argmin(self.slopes_pe_dynamics[-1])
-		#return np.argmax(self.slopes_pe_dynamics[-1])
+		return np.argmin(self.slopes_pe_buffer[-1])
+		#return np.argmax(self.slopes_pe_buffer[-1])
 
 	def log_last_movement(self, pos_a, pos_b):
 		self.movements_amplitude.append(utils.distance(pos_a,pos_b))
 
 	def get_linear_correlation_btw_amplitude_and_pe_dynamics(self):
 		# first make a vector storing the pe_dynamics of the current goals over time
-		#self.slopes_of_goals = np.asarray([[ self.slopes_pe_dynamics[elem][self.goal_id_history[elem]] ] for elem in self.goal_id_history]).flatten()
+		#self.slopes_of_goals = np.asarray([[ self.slopes_pe_buffer[elem][self.goal_id_history[elem]] ] for elem in self.goal_id_history]).flatten()
 		self.slopes_of_goals = []
 		for i in range(len(self.goal_id_history)):
 		#	print ('i ', i)
 		#	print ('self.goal_id_history[i] ',self.goal_id_history[i], ' shape ', np.asarray(self.goal_id_history).shape)
-		#	print ('self.slopes_pe_dynamics[self.goal_id_history[i]] ', self.slopes_pe_dynamics[self.goal_id_history[i]], ' shpae ' , np.asarray(self.slopes_pe_dynamics[self.goal_id_history[i]]).shape)
-			self.slopes_of_goals.append(self.slopes_pe_dynamics[i][self.goal_id_history[i]] )
+		#	print ('self.slopes_pe_buffer[self.goal_id_history[i]] ', self.slopes_pe_buffer[self.goal_id_history[i]], ' shpae ' , np.asarray(self.slopes_pe_buffer[self.goal_id_history[i]]).shape)
+			self.slopes_of_goals.append(self.slopes_pe_buffer[i][self.goal_id_history[i]] )
 
 		#slope_array = np.asarray(self.slopes_of_goals)
 		#movement_array= np.asarray(self.movements_amplitude)
@@ -139,7 +174,7 @@ class IntrinsicMotivation():
 
 
 	def save_im(self):
-		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_dynamics)
+		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_buffer)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_goals'), self.slopes_of_goals)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_goal_id_history'), self.goal_id_history)
@@ -157,15 +192,15 @@ class IntrinsicMotivation():
 		ax1.yaxis.grid(which="major", linestyle='-', linewidth=2)
 
 		# data = np.transpose(log_lp)
-		data = np.transpose(self.slopes_pe_dynamics)
-		#data = self.slopes_pe_dynamics
+		data = np.transpose(self.slopes_pe_buffer)
+		#data = self.slopes_pe_buffer
 		for i in range(0, num_goals):
 			ax = plt.subplot(num_goals + 1, 1, i + 2)
 			plt.plot(data[i])
 			plt.ylabel('g{}'.format(i))
 
 		if save:
-			plt.savefig(self.param.get('results_directory') + '/plots/im_slopes_pe_dynamics.jpg')
+			plt.savefig(self.param.get('results_directory') + '/plots/im_slopes_pe_buffer.jpg')
 		if show:
 			plt.show()
 		plt.close()

@@ -28,6 +28,12 @@ class Logger:
     def store_log(self, mse = []):
         self.mse.append(mse)
 
+    def get_last_mse(self):
+        if len(self.mse)>0:
+            return self.mse[-1]
+        return -1
+
+
     def get_iteration_count(self):
         return len(self.mse)
 

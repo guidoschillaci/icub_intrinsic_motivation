@@ -30,7 +30,7 @@ class Parameters:
             'goal_selection_mode':'som',
             'exp_iteration': 0,
 
-            'max_iterations':500,
+            'max_iterations':1000,
 
             'cae_filename': 'autoencoder.h5',
             'encoder_filename': 'encoder.h5',
@@ -55,16 +55,24 @@ class Parameters:
             'random_cmd_flag': False,
             'random_cmd_rate': 0.2,
 
+
             'im_competence_measure': 'euclidean',
             'im_decay_factor': 0.9,
+            # there is a hierarchical dynamics monitoring: over the mean squared error of the fwd model (higher level) and over each goal (lower)
+            # the slope of the MSE buffer controls the size of the goal PE buffer (in case im_fixed_pe_buffer_size is False)
+            'im_mse_buffer_size': 50, # initial size of the mean squared error buffer (should be bigger than max PE_buffer_size
             'im_initial_pe_buffer_size': 10, # initial size of the prediction error buffer
-            'im_fixed_pe_buffer_size': True, # force a fixed PE buffer size or make it dependent on the overall PE reduction trend?
+            'im_min_pe_buffer_size': 5, # max size of the prediction error buffer
+            'im_max_pe_buffer_size': 40, # max size of the prediction error buffer
+            'im_fixed_pe_buffer_size': False, # make the size of the prediction error buffer fixed or dependent on the dinamics of the FWD MSE
+            'im_pe_buffer_size_update_frequency': 20, # every how many iteration to wait for updating the pe_buffer_size according to the slope of the higher level?
+
             'im_random_goal_prob': 0.05, # probability of selecting a random goal instead of the best one
 
             'loss': 'mean_squared_error',
             'optimizer': 'adam',
             'memory_size': 500,
-            'memory_update_probability': 0.05,
+            'memory_update_probability': 0.01,
             'memory_update_strategy': MemUpdateStrategy.RANDOM.value,  # possible choices:  random, learning_progress
             #'batch_size': 32,
             'batchs_to_update_online': 3,
