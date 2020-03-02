@@ -9,19 +9,21 @@ import cv2
 from models import Models
 from intrinsic_motivation import IntrinsicMotivation
 
-from plots import plot_exploration, plot_learning_progress, plot_log_goal_inv, plot_log_goal_fwd,  plot_learning_comparisons
+from plots import plot_exploration, plot_learning_progress #, plot_log_goal_inv, plot_log_goal_fwd,  plot_learning_comparisons
 
 # from cv_bridge import CvBridge, CvBridgeError
 import random
 import os
-import shutil
+import time
+#import shutil
 import pickle
 import gzip
 import datetime
 import numpy as np
 import signal
 import sys, getopt
-from utils import clamp, normalise, normalise_x, normalise_y, unnormalise_x,unnormalise_y, Position, load_data, x_lims, y_lims, z_lims, speed_lim, clamp_x, clamp_y
+#from utils import RomiDataLoader
+import utils
 import threading
 import random
 from cam_sim import Cam_sim
@@ -48,6 +50,13 @@ class GoalBabbling():
 
 	def __init__(self, param):
 
+		# reset
+		print('Clearing TF session')
+		if tf.__version__ < "1.8.0":
+			tf.reset_default_graph()
+		else:
+			tf.compat.v1.reset_default_graph()
+
 		# this simulates cameras and positions
 		self.cam_sim = Cam_sim("./romi_data/")
 		self.parameters = param
@@ -56,7 +65,8 @@ class GoalBabbling():
 		signal.signal(signal.SIGINT, self.Exit_call)
 
 		print('Loading test dataset ', self.parameters.get('romi_dataset_pkl'))
-		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = load_data(self.parameters)
+		rdl = RomiDataLoader(self.parameters)
+		self.train_images, self.test_images, self.train_cmds, self.test_cmds, self.train_pos, self.test_pos = rdl.load_data()
 
 
 	def initialise(self, param):
@@ -107,7 +117,7 @@ class GoalBabbling():
 		self.models.logger_fwd.store_log(mse)
 
 	def run_babbling(self, param):
-		p = Position()
+		p = utils.Position()
 			
 		for _ in range(param.get('max_iterations')):
 
@@ -137,8 +147,8 @@ class GoalBabbling():
 			if ran < param.get('random_cmd_rate') or param.get('goal_selection_mode') =='random': #or self.models.memory_fwd.is_memory_still_not_full()
 				self.random_cmd_flag = True
 				print ('generating random motor command')
-				p.x = random.uniform(x_lims[0], x_lims[1])
-				p.y = random.uniform(y_lims[0], y_lims[1])
+				p.x = random.uniform(utils.x_lims[0], utils.x_lims[1])
+				p.y = random.uniform(utils.y_lims[0], utils.y_lims[1])
 				self.prev_goal_idx=-1
 				
 			else:
@@ -156,11 +166,11 @@ class GoalBabbling():
 				noise_x = np.random.normal(0,0.02)
 				noise_y = np.random.normal(0,0.02)
 				print ('prediction ', motor_pred)
-				p.x = clamp_x(unnormalise_x(motor_pred[0][0]+noise_x, param))
-				p.y = clamp_y(unnormalise_y(motor_pred[0][1]+noise_y, param))
-				#p = clamp(unnormalise(motor_pred[0])) # make it possible to add noise
+				p.x = utils.clamp_x(utils.unnormalise_x(motor_pred[0][0]+noise_x, param))
+				p.y = utils.clamp_y(utils.unnormalise_y(motor_pred[0][1]+noise_y, param))
+				#p = utils.clamp(utils.unnormalise(motor_pred[0])) # make it possible to add noise
 
-			#print ('predicted position ', motor_pred[0], 'p+noise ', motor_pred[0][0]+noise_x, ' ' , motor_pred[0][1]+noise_y, ' clamped ', p.x, ' ' , p.y, ' noise.x ', noise_x, ' n.y ', noise_y)
+			#print ('predicted utils.Position ', motor_pred[0], 'p+noise ', motor_pred[0][0]+noise_x, ' ' , motor_pred[0][1]+noise_y, ' utils.clamped ', p.x, ' ' , p.y, ' noise.x ', noise_x, ' n.y ', noise_y)
 
 			p.z = int(-90)
 			p.speed = int(1400)
@@ -178,7 +188,7 @@ class GoalBabbling():
 			self.prev_pos.speed=p.speed
 
 
-			# plot the explored points and the position of the goals
+			# plot the explored points and the utils.Position of the goals
 			if self.iteration % param.get('plot_exploration_iter') == 0:
 				if param.get('goal_selection_mode') == 'db' or param.get('goal_selection_mode') == 'random':
 					goals_pos = self.test_pos[0:(param.get('goal_size')*param.get('goal_size'))]
@@ -194,8 +204,8 @@ class GoalBabbling():
 			# update error dynamics of the current goal (it is supposed that at this moment the action is finished
 			if len(self.img)>0 and not (param.get('goal_selection_mode') == 'random') and not (self.random_cmd_flag and len(self.intrinsic_motivation.slopes_pe_buffer)>0) :
 
-				#cmd = normalise(p) # [p.x/float(x_lims[1]), p.y/float(y_lims[1])]
-				cmd = [ normalise_x(p.x, param), normalise_y(p.y, param)]
+				#cmd = utils.normalise(p) # [p.x/float(utils.x_lims[1]), p.y/float(utils.y_lims[1])]
+				cmd = [ utils.normalise_x(p.x, param), utils.normalise_y(p.y, param)]
 				prediction_code = self.models.fwd_model.predict(np.asarray(cmd).reshape((1,2)))
 
 				prediction_error = np.linalg.norm(np.asarray(self.goal_code[:])-np.asarray(prediction_code[:]))
@@ -241,18 +251,18 @@ class GoalBabbling():
 		#print ('image size ', str(param.get('image_size')))
 		rounded  = self.cam_sim.round2mul(tr,5) # only images every 5mm
 		for i in range(len(tr)):
-			#pp = Position()
+			#pp = utils.Position()
 			#pp.x = float(rounded[i][0])
 			#pp.y = float(rounded[i][1])
 			#pp.z = -90
 			#pp.speed = 1400
 
 			#print ('pp ',pp)
-			#self.pos.append(normalise(pp))
-			self.pos.append([normalise_x(float(rounded[i][0]), param), normalise_y(float(rounded[i][1]), param) ])
-			#self.cmd.append([float(int(cmd.x)) / x_lims[1], float(int(cmd.y)) / y_lims[1]] )
-			self.cmd.append([normalise_x(float(int(cmd.x)), param), normalise_y(float(int(cmd.y)), param) ])
-			#self.cmd.append( normalise(cmd) )
+			#self.pos.append(utils.normalise(pp))
+			self.pos.append([utils.normalise_x(float(rounded[i][0]), param), utils.normalise_y(float(rounded[i][1]), param) ])
+			#self.cmd.append([float(int(cmd.x)) / utils.x_lims[1], float(int(cmd.y)) / utils.y_lims[1]] )
+			self.cmd.append([utils.normalise_x(float(int(cmd.x)), param), utils.normalise_y(float(int(cmd.y)), param) ])
+			#self.cmd.append( utils.normalise(cmd) )
 			cv2_img = cv2.imread(trn[i])#,1 )
 			cv2.imshow('image',cv2_img)
 			if param.get('image_channels') ==1:
@@ -275,14 +285,14 @@ class GoalBabbling():
 
 
 	def save_models(self, param):
-		self.lock.acquire()
+		#self.lock.acquire()
 		self.models.save_models(param)
 		self.models.save_logs(self.parameters)
 		
 		self.intrinsic_motivation.get_linear_correlation_btw_amplitude_and_pe_dynamics()
 		self.intrinsic_motivation.save_im()
 		self.intrinsic_motivation.plot_slopes()
-		self.lock.release()
+		#self.lock.release()
 		print ('Models saved')
 		
 	def clear_session(self):
@@ -300,12 +310,12 @@ class GoalBabbling():
 		sys.exit(1)
 
 	def get_starting_pos(self):
-		p = Position()
+		p = utils.Position()
 		p.x = 0.0
 		p.y = 0.0
 		p.z = -50.0
 		p.speed = 1400.0
-		return normalise(p, self.parameters)
+		return utils.normalise(p, self.parameters)
 
 	def goto_starting_pos(self):
 		p = self.get_starting_pos()
@@ -313,14 +323,96 @@ class GoalBabbling():
 		self.prev_pos=p
 
 
+
+class RomiDataLoader:
+
+	def __init__(self, param):
+		self.param = param
+
+	#### utility functions for reading visuo-motor data from the ROMI dataset
+	# https://zenodo.org/record/3552827#.Xk5f6hNKjjC
+	def parse_data(self):
+		reshape = self.param.get('load_data_reshape')
+		file_name= self.param.get('romi_dataset_pkl')
+		pixels = self.param.get('image_size')
+		channels = self.param.get('image_channels')
+		images = []
+		positions = []
+		commands = []
+		with gzip.open(file_name, 'rb') as memory_file:
+			memories = pickle.load(memory_file)
+			print ('converting data...')
+			count = 0
+			for memory in memories:
+				image = memory['image']
+				if (channels == 1) and (image.ndim == 3):
+					image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+				image = cv2.resize(image, (pixels, pixels))
+
+				images.append(np.asarray(image).astype('float32') / 255)
+
+				cmd = memory['command']
+				commands.append([utils.normalise_x(float(cmd.x), self.param), utils.normalise_y(float(cmd.y), self.param)] )
+				#cmd_p = Position()
+				#cmd_p.x = float(cmd.x)
+				#cmd_p.y = float(cmd.y)
+				#cmd_p.z = -90
+				#cmd_p.speed = 1400
+
+				#commands.append(normalise(cmd_p))
+				pos = memory['position']
+				positions.append([utils.normalise_x(float(pos.x), self.param), utils.normalise_y(float(pos.y), self.param)] )
+				#pos_p = Position()
+				#pos_p.x = float(pos.x)
+				#pos_p.y = float(pos.y)
+				#pos_p.z = -90
+				#pos_p.speed = 1400
+
+				#positions.append(normalise(pos_p))
+
+				count += 1
+
+		positions = np.asarray(positions)
+		commands = np.asarray(commands)
+		images = np.asarray(images)
+		if reshape:
+			images = images.reshape((len(images), pixels, pixels, channels))
+		#print ('images shape ', str(images.shape))
+		return images, commands, positions
+
+	#### utility functions for reading visuo-motor data from the ROMI dataset
+	# https://zenodo.org/record/3552827#.Xk5f6hNKjjC
+	def load_data(self):
+
+		images, commands, positions = self.parse_data()
+		# split train and test data
+		# set always the same random seed, so that always the same test data are picked up (in case of multiple experiments in the same run)
+		np.random.seed(self.param.get('romi_seed_test_data'))
+		test_indexes = np.random.choice(range(len(positions)), self.param.get('romi_test_size'))
+		print ('test_indexes head: ', test_indexes[0:10])
+		#reset seed
+		np.random.seed(int(time.time()))
+
+		# print ('test idx' + str(test_indexes))
+		train_indexes = np.ones(len(positions), np.bool)
+		train_indexes[test_indexes] = 0
+
+		# split images
+		test_images = images[test_indexes]
+		train_images = images[train_indexes]
+		test_cmds = commands[test_indexes]
+		train_cmds = commands[train_indexes]
+		test_pos = positions[test_indexes]
+		train_pos = positions[train_indexes]
+		print ("number of train images: ", len(train_images))
+		print ("number of test images: ", len(test_images))
+
+		return train_images, test_images, train_cmds, test_cmds, train_pos, test_pos
+
+
 if __name__ == '__main__':
 
-	# reset
-	print('Clearing TF session')
-	if tf.__version__ < "1.8.0":
-		tf.reset_default_graph()
-	else:
-		tf.compat.v1.reset_default_graph()
+	
 
 	parameters = Parameters()
 	parameters.set('goal_selection_mode', 'som')

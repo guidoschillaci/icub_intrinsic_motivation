@@ -80,7 +80,7 @@ class IntrinsicMotivation():
 			if self.param.get('im_fixed_pe_buffer_size'):
 				self.pe_max_buffer_size_history.append(self.param.get('im_initial_pe_buffer_size'))
 			else:
-				new_buffer_size = self.slopes_mse_buffer[-1]
+				new_buffer_size = self.pe_max_buffer_size_history[-1]
 				if self.slopes_mse_buffer[-1] > 0:
 					if new_buffer_size < self.param.get('im_max_pe_buffer_size'):
 						new_buffer_size = new_buffer_size + 1 # or decrease?
@@ -91,7 +91,7 @@ class IntrinsicMotivation():
 
 	# update the dynamics of the overall mean squared error (forward model) calculated on the test dataset
 	def update_mse_dynamics(self, mse, _append=True):
-	
+		print ('updating MSE dynamics')
 		self.mse_buffer.append(mse)
 
 		if _append:
@@ -174,6 +174,7 @@ class IntrinsicMotivation():
 
 
 	def save_im(self):
+		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_mse_dynamics'), self.slopes_mse_buffer)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_pe_dynamics'), self.slopes_pe_buffer)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_slopes_of_goals'), self.slopes_of_goals)
 		np.save(os.path.join(self.param.get('results_directory'), 'im_pe_max_buffer_size_history'), self.pe_max_buffer_size_history)

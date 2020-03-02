@@ -361,6 +361,7 @@ def plot_log_goal_fwd( log_goal, log_curr, num_goals = 9, save = True,show= True
 		plt.show()
 	plt.close()
 
+'''
 def plot_learning_comparisons(model_type = 'fwd', exp_size = 2, save = True, show = True):
 
 	data_db = []
@@ -587,10 +588,11 @@ def do_plots(directory = './experiments/', exp_type =['db', 'som'], history_size
 				plt.show()
 			plt.close()
 
-
+'''
 if __name__ == '__main__':
-	do_plots(model_type='fwd')
-	do_plots(model_type='inv')
+	pass
+	#do_plots(model_type='fwd')
+	#do_plots(model_type='inv')
 	#plot_learning_comparisons2(model_type='inv')
 	#plot_learning_comparisons2(model_type='fwd')
 	#log_goal_pos = np.loadtxt('./models/log_goal_pos.txt')

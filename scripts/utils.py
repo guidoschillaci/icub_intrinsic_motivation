@@ -116,87 +116,10 @@ def clear_tensorflow_graph():
 	else:
 		tf.compat.v1.reset_default_graph()
 
-#### utility functions for reading visuo-motor data from the ROMI dataset
-# https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def parse_data( param):
-	reshape = param.get('load_data_reshape')
-	file_name= param.get('romi_dataset_pkl')
-	pixels = param.get('image_size')
-	channels = param.get('image_channels')
-	images = []
-	positions = []
-	commands = []
-	with gzip.open(file_name, 'rb') as memory_file:
-		memories = pickle.load(memory_file)
-		print ('converting data...')
-		count = 0
-		for memory in memories:
-			image = memory['image']
-			if (channels == 1) and (image.ndim == 3):
-				image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-			image = cv2.resize(image, (pixels, pixels))
-
-			images.append(np.asarray(image).astype('float32') / 255)
-
-			cmd = memory['command']
-			commands.append([normalise_x(float(cmd.x), param), normalise_y(float(cmd.y), param)] )
-			#cmd_p = Position()
-			#cmd_p.x = float(cmd.x)
-			#cmd_p.y = float(cmd.y)
-			#cmd_p.z = -90
-			#cmd_p.speed = 1400
-
-			#commands.append(normalise(cmd_p))
-			pos = memory['position']
-			positions.append([normalise_x(float(pos.x), param), normalise_y(float(pos.y), param)] )
-			#pos_p = Position()
-			#pos_p.x = float(pos.x)
-			#pos_p.y = float(pos.y)
-			#pos_p.z = -90
-			#pos_p.speed = 1400
-
-			#positions.append(normalise(pos_p))
-
-			count += 1
-
-	positions = np.asarray(positions)
-	commands = np.asarray(commands)
-	images = np.asarray(images)
-	if reshape:
-		images = images.reshape((len(images), pixels, pixels, channels))
-	#print ('images shape ', str(images.shape))
-	return images, commands, positions
-
-#### utility functions for reading visuo-motor data from the ROMI dataset
-# https://zenodo.org/record/3552827#.Xk5f6hNKjjC
-def load_data(param):
-
-	images, commands, positions = parse_data(param)
-	# split train and test data
-	# set always the same random seed, so that always the same test data are picked up (in case of multiple experiments in the same run)
-	np.random.seed(param.get('romi_seed_test_data'))
-	test_indexes = np.random.choice(range(len(positions)), param.get('romi_test_size'))
-	#reset seed
-	np.random.seed(int(time.time()))
-
-	# print ('test idx' + str(test_indexes))
-	train_indexes = np.ones(len(positions), np.bool)
-	train_indexes[test_indexes] = 0
-
-	# split images
-	test_images = images[test_indexes]
-	train_images = images[train_indexes]
-	test_cmds = commands[test_indexes]
-	train_cmds = commands[train_indexes]
-	test_pos = positions[test_indexes]
-	train_pos = positions[train_indexes]
-	print ("number of train images: ", len(train_images))
-	print ("number of test images: ", len(test_images))
-
-	return train_images, test_images, train_cmds, test_cmds, train_pos, test_pos
-
 # get NN layer index by name
 def getLayerIndexByName(model, layername):
 	for idx, layer in enumerate(model.layers):
 		if layer.name == layername:
 			return idx
+
+
