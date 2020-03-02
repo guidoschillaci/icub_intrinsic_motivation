@@ -31,7 +31,9 @@ from parameters import Parameters
 from copy import deepcopy
 #from doepy import build, read_write # pip install doepy - it may require also diversipy
 
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
+import tensorflow as tf
+
 
 GPU_FRACTION = 0.5
 

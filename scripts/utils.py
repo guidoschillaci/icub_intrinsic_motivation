@@ -3,7 +3,8 @@ import gzip
 import pickle
 import cv2
 import numpy as np
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import time
 
 x_lims=[0.0,750.0]
