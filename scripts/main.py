@@ -33,7 +33,7 @@ from copy import deepcopy
 
 import tensorflow.compat.v1 as tf
 
-GPU_FRACTION = 0.7
+GPU_FRACTION = 0.5
 
 print ('Tensorflow version ', str(tf.__version__))
 #if tf.__version__ < "1.14.0":
