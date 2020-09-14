@@ -15,6 +15,13 @@
         <tag>iCub_SIM</tag>
     </module>
     <module>
+        <name>yarpmotorgui</name>
+        <node>localhost</node>
+        <parameters></parameters>
+        <stdio></stdio>
+        <tag>yarpmotorgui</tag>
+    </module>
+    <module>
         <name>yarpview</name>
         <node>localhost</node>
         <parameters>--name /leftCam --x 0 --y 0 --RefreshTime 33</parameters>
