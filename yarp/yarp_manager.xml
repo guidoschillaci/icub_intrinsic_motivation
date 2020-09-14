@@ -1,12 +1,12 @@
 # Path to the folder which contains application description files
-apppath =  “/code/icub_intrinsic_motivation/apps"
+apppath =  /code/icub_intrinsic_motivation/apps
 load_subfolders = yes
 
 # Path to the folder which contains module description files
-modpath =  "/code/icub_intrinsic_motivation/modules"
+modpath =  /code/icub_intrinsic_motivation/modules
 
 # Path to the folder which contains module description files
-respath =  "/code/icub_intrinsic_motivation/resources"
+respath =  /code/icub_intrinsic_motivation/resources
 
 # Fault tolerance
 # parameters: yes|No
