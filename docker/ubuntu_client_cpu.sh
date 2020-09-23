@@ -1,12 +1,15 @@
 xhost +local:root
 
+ipclient=localhost
+
 if [ -z "$1" ]
   then
-    echo "No argument supplied. I need an ip address of the client pc, or just localhost."
-    exit 1
+    echo "No argument supplied. I set the address of the client pc to localhost."
+  else
+    ipclient=$1
+    echo "Setting the address of the client pc to ${ipclient}"
 fi
 
-ipclient=$1
 
 export DOCKER_CONTAINER_NAME=icub_container
 if [ ! "$(docker ps -q -f name=${DOCKER_CONTAINER_NAME})" ]; then
