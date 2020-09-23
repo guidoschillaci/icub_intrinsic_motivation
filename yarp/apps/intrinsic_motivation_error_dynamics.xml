@@ -10,7 +10,7 @@
     <module>
         <name>iCub_SIM</name>
         <node>localhost</node>
-        <parameters></parameters>
+        <parameters>--from iCub_parts_activation.ini --self_collisions on --covers_collisions on --whole_body_skin_emul on</parameters>
         <stdio></stdio>
         <tag>iCub_SIM</tag>
     </module>
@@ -58,4 +58,107 @@
         <to>/iCubGui/right_arm:i</to>
         <protocol>udp</protocol>
     </connection>
+
+
+    <connection>
+        <from>/icubSim/inertial</from>
+        <to>/iCubGui/inertial:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <!-- SKIN -->
+
+
+
+    <!--PPS modules-->
+    <module>
+        <name>skinEventsSampler</name>
+        <parameters>--name skinEventsAggregator</parameters>
+        <node>localhost</node>
+        <stdio></stdio>
+        <tag>skinEventsAggreg</tag>
+    </module>
+
+    <!--skinGui modules-->
+    <module>
+        <name>iCubSkinGui</name>
+        <!-- Remember to use the proper configuration files (i.e. "_V2.ini" for V2 robots) -->
+        <parameters>--from left_forearm.ini --useCalibration --xpos 0 --ypos 0 --width 300 --height 300</parameters>
+        <node>localhost</node>
+        <tag>skinGuiLF</tag>
+    </module>
+    <module>
+        <name>iCubSkinGui</name>
+        <!-- Remember to use the proper configuration files (i.e. "_V2.ini" for V2 robots) -->
+        <parameters>--from left_hand_V2_1.ini --useCalibration --xpos 320 --ypos 0 --width 300 --height 300</parameters>
+        <node>localhost</node>
+        <tag>skinGuiLH</tag>
+    </module>
+    <module>
+        <name>iCubSkinGui</name>
+        <!-- Remember to use the proper configuration files (i.e. "_V2.ini" for V2 robots) -->
+        <parameters>--from right_forearm.ini --useCalibration --xpos 640 --ypos 0 --width 300 --height 300</parameters>
+        <node>localhost</node>
+        <tag>skinGuiRF</tag>
+    </module>
+    <module>
+        <name>iCubSkinGui</name>
+        <!-- Remember to use the proper configuration files (i.e. "_V2.ini" for V2 robots) -->
+        <!--<parameters>--from right_hand_V2_1.ini --useCalibration --xpos 960 --ypos 0 --width 300 --height 300</parameters>-->
+        <parameters>--from right_hand_V2_1.ini --useCalibration --xpos 941 --ypos 0 --width 300 --height 300</parameters>
+        <node>localhost</node>
+        <tag>skinGuiRH</tag>
+    </module>
+
+
+	<!--Skin connections-->
+<connection>
+        <from>/icubSim/skinManager/skin_events:o</from>
+        <to>/visuoTactileRF/skin_events:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+      <from>/icubSim/skinManager/skin_events:o</from>
+      <to>/skinEventsAggregator/skin_events:i</to>
+      <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/left_hand_comp</from>
+        <to>/skinGui/left_hand:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/left_forearm_comp</from>
+        <to>/skinGui/left_forearm:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/left_arm_comp</from>
+        <to>/skinGui/left_arm:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/right_hand_comp</from>
+        <to>/skinGui/right_hand:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/right_forearm_comp</from>
+        <to>/skinGui/right_forearm:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+    <connection>
+        <from>/icubSim/skin/right_arm_comp</from>
+        <to>/skinGui/right_arm:i</to>
+        <protocol>udp</protocol>
+    </connection>
+
+
 </application>
